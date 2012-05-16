@@ -1,10 +1,8 @@
-//
-// This script is executed by Grails after plugin was installed to project.
-// This script is a Gant script so you can use all special variables provided
-// by Gant (such as 'baseDir' which points on project base dir). You can
-// use 'ant' to access a global instance of AntBuilder
-//
-// For example you can create directory under project tree:
-//
-//    ant.mkdir(dir:"${basedir}/grails-app/jobs")
-//
+// Write the context.xml file in META-INF and WEB-INF
+def contextDotXml = """\
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<Context>
+    <Loader delegate=\"true\"/>
+</Context>"""
+new File("$basedir/web-app/META-INF/context.xml").write contextDotXml
+new File("$basedir/web-app/WEB-INF/context.xml").write contextDotXml
