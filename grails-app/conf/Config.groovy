@@ -18,6 +18,7 @@ log4j = {
     }
 
     debug 'org.atmosphere'
+    debug 'org.grails.plugin.platform'
 
 
     error 'org.codehaus.groovy.grails.web.servlet',  //  controllers

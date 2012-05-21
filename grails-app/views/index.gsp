@@ -37,11 +37,9 @@
 
         request.onMessage = function (response) {
           detectedTransport = response.transport;
-          if (response.status == 200) {
-            var data = response.responseBody;
-            if (data.length > 0) {
-              $('ul').prepend($('<li></li>').text(" Message Received: " + data + " but detected transport is " + detectedTransport));
-            }
+          if (response.status == 200 && response.responseBody.length > 0) {
+            var data = $.parseJSON(response.responseBody);
+            $('ul').prepend($('<li></li>').text(" Message Received: " + data.message + " but detected transport is " + detectedTransport));
           }
         };
 
@@ -54,7 +52,7 @@
       }
 
       function connect() {
-        unsubscribe();
+        //unsubscribe();
         getElementById('phrase').value = '';
         getElementById('sendMessage').className = '';
         getElementById('phrase').focus();
@@ -90,7 +88,7 @@
             m = " sent trying to use " + detectedTransport;
           }
 
-          subSocket.push({data:'message=' + getElementByIdValue('phrase') + m});
+          subSocket.push({data:$.stringifyJSON({message:getElementByIdValue('phrase') + m})});
 
           getElementById('phrase').value = '';
           return false;
@@ -110,7 +108,7 @@
           m = " sent trying to use " + detectedTransport;
         }
 
-        subSocket.push({data:'message=' + getElementByIdValue('phrase') + m});
+        subSocket.push({data:$.stringifyJSON({message:getElementByIdValue('phrase') + m})});
 
         getElementById('phrase').value = '';
         return false;
