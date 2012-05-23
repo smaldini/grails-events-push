@@ -32,6 +32,7 @@ class EventsPushGrailsPlugin {
             "grails-app/services/**/Test*.groovy"
     ]
 
+    def observe = ['events']
 
     def title = "Events Push Plugin" // Headline display name of the plugin
     def author = "Stephane Maldini"
@@ -113,8 +114,6 @@ grailsEvents.push('saveTodo', data);
     }
 
     def onChange = { event ->
-        // TODO Implement code that is executed when any artefact that this plugin is
-        // watching is modified and reloaded. The event contains: event.source,
-        // event.application, event.manager, event.ctx, and event.plugin.
+        EventsPushHandler.registerTopics(event.ctx.grailsEventsRegistry, event.ctx.grailsEvents)
     }
 }
