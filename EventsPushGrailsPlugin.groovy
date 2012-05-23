@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import org.grails.plugin.platform.events.push.EventsPushHandler
 
 class EventsPushGrailsPlugin {
@@ -23,7 +24,7 @@ class EventsPushGrailsPlugin {
     // the version or versions of Grails the plugin is designed for
     def grailsVersion = "2.0 > *"
     // the other plugins this plugin depends on
-    def dependsOn = [:]
+    def loadAfter = ['platformCore']
     // resources that are excluded from plugin packaging
     def pluginExcludes = [
             "grails-app/views/error.gsp",
@@ -32,7 +33,7 @@ class EventsPushGrailsPlugin {
             "grails-app/services/**/Test*.groovy"
     ]
 
-    def observe = ['events']
+    def observe = ['platformCore']
 
     def title = "Events Push Plugin" // Headline display name of the plugin
     def author = "Stephane Maldini"
@@ -41,16 +42,30 @@ class EventsPushGrailsPlugin {
 Events-push is a client-side events bus based on the portable push library Atmosphere and Grails platform-core plugin for events
 propagation/listening. It simply allows your client to listen to server-side events and push data. It uses WebSockets by default
 and failbacks to Comet method if required (server not compliant, browser too old...).
-Events-push is a white-list broadcaster (triggered scope is 'browser', where your default listener scope with platform-core plugin is 'app'). You
-will need to define which events that can be propagated to server-side by using Events DSL to override 'browser' scope. Ie:
+Events-push is a white-list broadcaster (client-side events scope is 'browser'). You will need to define which events can be
+ propagated to server by using Events DSL to use 'browser' scope. To register listeners from client, you will need to
+ define them too. Ie:
 
 MyEvents.groovy >
 events = {
-    'saveTodo' scope:'browser' //change 'saveTodo' listeners scope for browser, hence receiving client data.
+    'saveTodo' scope:'*' // allows both server and client to send data over this topic
+    'savedTodo' browser:true // allows browser push on this topic
 }
 
-someView.html >
-grailsEvents.push('saveTodo', data);
+MyService.groovy >
+//will receive client events
+@Listener saveTodo(Map data){
+  ...
+  event('savedTodo', data) // will trigger registered browsers
+}
+
+someView.gsp >
+<r:require module="grailsEvents"/>
+<r:script>
+ var grailsEvents = new grails.Events("http://localhost:8080/app/g-eventspush");
+ grailsEvents.send('saveTodo', data); //will send data to server topic 'saveTodo'
+ grailsEvents.on('savedTodo', function(data){...}); //will listen for server events on 'savedTodo' topic
+</r:script
 '''
 
     // URL to the plugin's documentation
@@ -114,6 +129,9 @@ grailsEvents.push('saveTodo', data);
     }
 
     def onChange = { event ->
-        EventsPushHandler.registerTopics(event.ctx.grailsEventsRegistry, event.ctx.grailsEvents)
+
+        if (application.isArtefactOfType('Events', event.source)) {
+            EventsPushHandler.registerTopics(event.ctx.grailsEventsRegistry, event.ctx.grailsEvents)
+        }
     }
 }
