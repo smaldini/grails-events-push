@@ -95,7 +95,6 @@ public class EventsPushHandler extends HttpServlet {
     }
 
     static public void registerTopics(EventsRegistry eventsRegistry, EventsImpl grailsEvents) {
-        BroadcasterFactory.getDefault().destroy();
         Method m = ReflectionUtils.findMethod(BroadcastEventWrapper.class, "broadcastEvent", Object.class);
         List<String> doneTopics = new ArrayList<String>();
         Object broadcastClient = null;
