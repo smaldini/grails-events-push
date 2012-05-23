@@ -17,13 +17,14 @@
  */
 package org.grails.plugin.platform.events.push;
 
-import grails.events.BroadcastOrder;
+import grails.converters.JSON;
 import org.atmosphere.cpr.*;
 import org.atmosphere.websocket.WebSocketEventListenerAdapter;
 import org.codehaus.groovy.grails.commons.ApplicationAttributes;
 import org.codehaus.groovy.grails.commons.GrailsApplication;
+import org.codehaus.groovy.grails.web.json.JSONElement;
+import org.codehaus.groovy.grails.web.json.JSONObject;
 import org.grails.plugin.platform.events.EventDefinition;
-import org.grails.plugin.platform.events.EventReply;
 import org.grails.plugin.platform.events.EventsImpl;
 import org.grails.plugin.platform.events.registry.EventsRegistry;
 import org.slf4j.Logger;
@@ -38,8 +39,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.Map;
 
 /**
  * @author Stephane Maldini <smaldini@doc4web.com>
@@ -61,8 +63,7 @@ public class EventsPushHandler extends HttpServlet {
 
     public static final String ID_GRAILSEVENTS = "grailsEvents";
     public static final String PUSH_SCOPE = "browser";
-    public static final String CLIENT_BROADCAST_PARAM = "clientBroadcast";
-    public static final String MESSAGE_PARAM = "message";
+    public static final String CLIENT_BROADCAST_PARAM = "browser";
 
     @Override
     public void init() throws ServletException {
@@ -103,9 +104,9 @@ public class EventsPushHandler extends HttpServlet {
             broadcastClient = eventDefinition.getOthersAttributes() != null ? eventDefinition.getOthersAttributes().get(CLIENT_BROADCAST_PARAM) : false;
             broadcastClient = broadcastClient != null ? broadcastClient : false;
 
-            if (topic != null && ((Boolean) broadcastClient || eventDefinition.getScope().equalsIgnoreCase(PUSH_SCOPE)) &&
+            if (topic != null && ((Boolean) broadcastClient) &&
                     !doneTopics.contains(topic)) {
-                eventsRegistry.addListener(PUSH_SCOPE, topic, new BroadcastEventWrapper(topic, (Boolean) broadcastClient), m);
+                eventsRegistry.addListener(null, topic, new BroadcastEventWrapper(topic), m);
                 doneTopics.add(topic);
             }
         }
@@ -113,29 +114,17 @@ public class EventsPushHandler extends HttpServlet {
 
     private static class BroadcastEventWrapper {
         private Broadcaster b;
-        private boolean clientBroadcast = false;
 
-        public BroadcastEventWrapper(String topic, boolean clientBroadcast) {
+        public BroadcastEventWrapper(String topic) {
             this.b = BroadcasterFactory.getDefault().lookup(topic, true);
-            this.clientBroadcast = clientBroadcast;
         }
 
         public void broadcastEvent(Object message) {
-            if (message != null && (clientBroadcast || !message.getClass().isAssignableFrom(AtmosphereRequest.class))) {
-                if (message.getClass().isAssignableFrom(AtmosphereRequest.class)) {
-                    try {
-                        StringBuffer sb = new StringBuffer();
-                        String buffer = null;
-                        while ((buffer = ((AtmosphereRequest) message).getReader().readLine()) != null) {
-                            sb.append(buffer);
-                        }
-                        message = sb.toString();
-                    } catch (Exception e) {
-                        log.error("", e);
-                    }
-                }
-
-                b.broadcast(message);
+            if (message != null) {
+                Map<String, Object> jsonResponse = new HashMap<String, Object>();
+                jsonResponse.put("topic",b.getID());
+                jsonResponse.put("body", message);
+                b.broadcast(new JSON(jsonResponse).toString());
             }
         }
     }
@@ -153,7 +142,7 @@ public class EventsPushHandler extends HttpServlet {
 
 
         Broadcaster b = broadcasterFactory.lookup(extractTopic(req.getPathInfo()));
-        if(b == null){
+        if (b == null) {
             res.sendError(403);
             return;
         }
@@ -172,26 +161,37 @@ public class EventsPushHandler extends HttpServlet {
 
     public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String topic = extractTopic(req.getPathInfo());
-        EventReply reply = grailsEvents._event(PUSH_SCOPE, topic, req);
-        if (reply.size() > 0) {
-            List<String> toBroadcast = new ArrayList<String>();
+        JSONObject element = (JSONObject) JSON.parse(req);
+        topic = element.has("topic") ? element.get("topic").toString() : topic;
+        if (topic == null) {
+            return;
+        }
+        JSONElement body = element.has("body") ? (JSONElement) element.get("body") : null;
+        grailsEvents._event(PUSH_SCOPE, topic, body != null ? body : element);
+
+        /*
+        EventReply reply = grailsEvents._event(null, topic, body != null ? body : element);
+        int replySize = reply.size();
+        if (replySize > 0) {
+            int i = 0;
+            List<String> toReply = new ArrayList<String>();
             try {
                 for (Object data : reply.getValues()) {
-                    if (BroadcastOrder.class.isAssignableFrom(data.getClass())) {
-                        toBroadcast.add(((BroadcastOrder)data).getData().toString());
+                    if (JSONElement.class.isAssignableFrom(data.getClass())) {
+                        toReply.add(data.toString() + (i < replySize ? "," : ""));
                     }
+                    i++;
                 }
             } catch (ExecutionException e) {
                 log.error("", e);
             } catch (InterruptedException e) {
                 log.error("", e);
             }
-            if (toBroadcast.size() > 0) {
-                Broadcaster b = broadcasterFactory.lookup(topic);
-                b.broadcast(toBroadcast);
+            if (toReply.size() > 0) {
+                //res.getOutputStream().write();
             }
 
-        }
+        }*/
 
     }
 

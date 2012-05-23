@@ -15,25 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.groovy.grails.platform.push
 
-import grails.events.Listener
-
-/**
- * @file
- * @author Stephane Maldini <smaldini@doc4web.com>
- * @version 1.0
- * @date 21/05/12
-
- * @section DESCRIPTION
- *
- * [Does stuff]
- */
-class TestService {
-
-    @Listener('sampleBro')
-    def testEvent(test) {
-        println """--> $test"""
-        new grails.events.BroadcastOrder('{ "message":"hello !!!!" }')
-    }
+events = {
+    "events-push-topic"  browser:true
 }

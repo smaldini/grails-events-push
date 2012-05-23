@@ -4,9 +4,8 @@
   <meta name='layout' content='main'/>
   <r:script>
     $(document).ready(function () {
-      var detectedTransport = null;
-      var socket = $.atmosphere;
-      var subSocket;
+
+      var grailsEvents = new grails.Events(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port+"/events-push");
 
       function getKeyCode(ev) {
         if (window.event) return window.event.keyCode;
@@ -17,13 +16,10 @@
         return document.getElementById(arguments[0]);
       }
 
-      function getTransport(t) {
-        transport = t.options[t.selectedIndex].value;
-        if (transport == 'autodetect') {
-          transport = 'websocket';
-        }
-
-        return false;
+      function subscribe(){
+        grailsEvents.on(getElementById('topic').value, function(data){
+          $("ul").append("<div>"+data.message+"</div>")
+        })
       }
 
       function getElementByIdValue() {
@@ -31,28 +27,11 @@
         return document.getElementById(arguments[0]).value;
       }
 
-      function subscribe() {
-        var request = { url:'/events-push/g-eventsbus/' + getElementByIdValue('topic'),
-          transport:getElementByIdValue('transport')};
-
-        request.onMessage = function (response) {
-          detectedTransport = response.transport;
-          if (response.status == 200 && response.responseBody.length > 0) {
-            var data = $.parseJSON(response.responseBody);
-            $('ul').prepend($('<li></li>').text(" Message Received: " + data.message + " but detected transport is " + detectedTransport));
-          }
-        };
-
-        subSocket = socket.subscribe(request);
-      }
-
       function unsubscribe() {
-        callbackAdded = false;
-        socket.unsubscribe();
+        grailsEvents.close();
       }
 
       function connect() {
-        //unsubscribe();
         getElementById('phrase').value = '';
         getElementById('sendMessage').className = '';
         getElementById('phrase').focus();
@@ -88,7 +67,7 @@
             m = " sent trying to use " + detectedTransport;
           }
 
-          subSocket.push({data:$.stringifyJSON({message:getElementByIdValue('phrase') + m})});
+          grailsEvents.send(getElementById('topic').value, {message:getElementByIdValue('phrase') + m});
 
           getElementById('phrase').value = '';
           return false;
@@ -108,53 +87,22 @@
           m = " sent trying to use " + detectedTransport;
         }
 
-        subSocket.push({data:$.stringifyJSON({message:getElementByIdValue('phrase') + m})});
-
         getElementById('phrase').value = '';
         return false;
       };
 
+      grailsEvents.send(getElementById('topic').value, {message:getElementByIdValue('phrase') + m});
+
       getElementById('topic').focus();
     });
   </r:script>
-  <style type='text/css'>
-  div {
-    border: 0px solid black;
-  }
-
-  input#phrase {
-    width: 30em;
-    background-color: #e0f0f0;
-  }
-
-  input#topic {
-    width: 14em;
-    background-color: #e0f0f0;
-  }
-
-  div.hidden {
-    display: none;
-  }
-
-  span.from {
-    font-weight: bold;
-  }
-
-  span.alert {
-    font-style: italic;
-  }
-  </style>
 </head>
 
 <body>
-<h1>PubSub Sample using Atmosphere's JQuery Plug In. By default the sample use the DefaultBroadcaster.</h1>
-
-<h2>To enable Redis, XMPP, Hazelcast of ActiveMQ (JMS), uncomments in pom.xml the associated dependency or put atmosphere-{hazelcast|jms|xmpp|redis}.jar under WEB-INF/lib</h2>
-
-<h2>Select PubSub topic to subscribe</h2>
+<h2>Select topic to subscribe</h2>
 
 <div id='pubsub'>
-  <input id='topic' type='text'/>
+  <input id='topic' type='text' value="sampleBro"/>
 </div>
 
 <h2>Select transport to use for subscribing</h2>

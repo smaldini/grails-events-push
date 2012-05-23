@@ -18,6 +18,6 @@
 import org.grails.plugin.platform.test.SampleService
 
 events = {
-    "sampleHello" scope:'browser'
-    //"sampleBro" scope:'browser', clientBroadcast:true
+    //"sampleHello" scope:'browser'
+    "sampleBro"  browser:true
 }
