@@ -33,7 +33,16 @@ class TestService {
 
     @Listener('sampleBro')
     def testEvent(test) {
+
         println """--> $test"""
-        new grails.events.BroadcastOrder('{ "message":"hello !!!!" }')
+        def ts=new TestDomain(name:'test')
+        println ts
+        ts.save()
+        println ts
+    }
+
+    @Listener("onSave")
+    def testSave(test){
+        println test
     }
 }

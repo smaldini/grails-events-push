@@ -5,7 +5,7 @@
   <r:script>
     $(document).ready(function () {
 
-      var grailsEvents = new grails.Events(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port+"/events-push");
+      var grailsEvents = new grails.Events(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + "/events-push");
 
       function getKeyCode(ev) {
         if (window.event) return window.event.keyCode;
@@ -16,10 +16,13 @@
         return document.getElementById(arguments[0]);
       }
 
-      function subscribe(){
-        grailsEvents.on(getElementById('topic').value, function(data){
-          $("ul").append("<div>"+data.message+"</div>")
-        })
+      function subscribe() {
+        grailsEvents.on(getElementById('topic').value, function (data) {
+          $("ul").append("<div>" + data.message + "</div>")
+        });
+        grailsEvents.on("afterInsert", function (data) {
+          $("ul").append("<div>" + data.id + "</div>");
+        });
       }
 
       function getElementByIdValue() {
@@ -61,13 +64,7 @@
         var keyc = getKeyCode(event);
         if (keyc == 13 || keyc == 10) {
 
-          var m = " sent using " + detectedTransport;
-          if (detectedTransport == null) {
-            detectedTransport = getElementByIdValue('transport');
-            m = " sent trying to use " + detectedTransport;
-          }
-
-          grailsEvents.send(getElementById('topic').value, {message:getElementByIdValue('phrase') + m});
+          grailsEvents.send(getElementById('topic').value, {message:getElementByIdValue('phrase')});
 
           getElementById('phrase').value = '';
           return false;
@@ -81,17 +78,13 @@
           return;
         }
 
-        var m = " sent using " + detectedTransport;
-        if (detectedTransport == null) {
-          detectedTransport = getElementByIdValue('transport');
-          m = " sent trying to use " + detectedTransport;
-        }
+
+        grailsEvents.send(getElementById('topic').value, {message:getElementByIdValue('phrase')});
 
         getElementById('phrase').value = '';
         return false;
       };
 
-      grailsEvents.send(getElementById('topic').value, {message:getElementByIdValue('phrase') + m});
 
       getElementById('topic').focus();
     });
@@ -105,21 +98,7 @@
   <input id='topic' type='text' value="sampleBro"/>
 </div>
 
-<h2>Select transport to use for subscribing</h2>
-
-<h3>You can change the transport any time.</h3>
-
-<div id='select_transport'>
-  <select id="transport">
-    <option id="autodetect" value="websocket">autodetect</option>
-    <option id="jsonp" value="jsonp">jsonp</option>
-    <option id="long-polling" value="long-polling">long-polling</option>
-    <option id="streaming" value="streaming">http streaming</option>
-    <option id="websocket" value="websocket">websocket</option>
-  </select>
   <input id='connect' class='button' type='submit' name='connect' value='Connect'/>
-</div>
-<br/>
 <br/>
 
 <h2 id="s_h" class='hidden'>Publish Topic</h2>

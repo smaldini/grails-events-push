@@ -30,6 +30,7 @@ class EventsPushGrailsPlugin {
             "grails-app/views/error.gsp",
             "grails-app/views/index.gsp",
             "grails-app/conf/Test*.groovy",
+            "grails-app/domain/**/Test*.groovy",
             "grails-app/services/**/Test*.groovy"
     ]
 

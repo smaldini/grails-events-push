@@ -166,8 +166,8 @@ public class EventsPushHandler extends HttpServlet {
         if (topic == null) {
             return;
         }
-        JSONElement body = element.has("body") ? (JSONElement) element.get("body") : null;
-        grailsEvents._event(PUSH_SCOPE, topic, body != null ? body : element);
+        final JSONElement body = element.has("body") ? (JSONElement) element.get("body") : null;
+        grailsEvents._eventAsync(PUSH_SCOPE, topic, body != null ? body : element);
 
         /*
         EventReply reply = grailsEvents._event(null, topic, body != null ? body : element);
