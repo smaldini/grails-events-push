@@ -20,10 +20,10 @@ events = {
 
 MyService.groovy >
 ```groovy
-//will receive client events
+//will receive client events from 'saveTodo' topic
 @Listener saveTodo(Map data){
   //...
-  event('savedTodo', data) // will trigger registered browsers
+  event('savedTodo', data) // will trigger registered browsers on 'savedTodo' topic
 }
 ```
 
@@ -31,7 +31,7 @@ someView.gsp >
 ````gsp
 <r:require module="grailsEvents"/>
 <r:script>
- var grailsEvents = new grails.Events("http://localhost:8080/app/g-eventspush");
+ var grailsEvents = new grails.Events("http://localhost:8080/app/");
  grailsEvents.send('saveTodo', data); //will send data to server topic 'saveTodo'
  grailsEvents.on('savedTodo', function(data){...}); //will listen for server events on 'savedTodo' topic
 </r:script>
