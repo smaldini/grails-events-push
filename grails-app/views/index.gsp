@@ -5,14 +5,19 @@
   <r:script>
     $(document).ready(function () {
 
+      /*
+       Register a grailsEvents handler for this window, constructor can take a root URL,
+       a path to event-bus servlet and options. There are sensible defaults for each argument
+       */
       var grailsEvents = new grails.Events(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + "/events-push");
 
-      function getKeyCode(ev) {
-        if (window.event) return window.event.keyCode;
-        return ev.keyCode;
-      }
-
+      /*
+       Add a listener for the topic from first input + a listener on afterInsert topic.
+       */
       function subscribe() {
+        /*
+         Adding a listener requires a topic to listen and a function handler to react, data should be a JSON object
+         */
         grailsEvents.on($('#topic').val(), function (data) {
           $("#messages").append("<div>" + data.message + "</div>")
         });
@@ -21,9 +26,14 @@
         });
       }
 
+      function getKeyCode(ev) {
+        if (window.event) return window.event.keyCode;
+        return ev.keyCode;
+      }
+
       function connect() {
         $('#phrase').val('');
-        $('#sendMessage').attr('class','');
+        $('#sendMessage').attr('class', '');
         $('#phrase').focus();
         subscribe();
         $('#connect').val("Switch transport");
@@ -38,7 +48,7 @@
       });
 
       $('#topic').keyup(function (event) {
-        $('#sendMessage').attr('class','hidden');
+        $('#sendMessage').attr('class', 'hidden');
         var keyc = getKeyCode(event);
         if (keyc == 13 || keyc == 10) {
           connect();
@@ -50,6 +60,11 @@
       $('#phrase').keyup(function (event) {
         var keyc = getKeyCode(event);
         if (keyc == 13 || keyc == 10) {
+          /*
+           Sending an event to server (will be also to local in a future release).
+           Requires the event topic to be used, and a JSON object.
+           */
+
           grailsEvents.send($('#topic').val(), {message:$('#phrase').val()});
           $('#phrase').val('');
           return false;
@@ -62,6 +77,9 @@
           alert("Please enter a message to publish");
           return;
         }
+        /*
+         Same sending method than above but using click button.
+         */
         grailsEvents.send($('#topic').val(), {message:$('#phrase').val()});
         $('#phrase').val('');
         return false;
@@ -80,7 +98,7 @@
   <input id='topic' type='text' value="sampleBro"/>
 </div>
 
-  <input id='connect' class='button' type='submit' name='connect' value='Connect'/>
+<input id='connect' class='button' type='submit' name='connect' value='Connect'/>
 <br/>
 
 <h2 id="s_h" class='hidden'>Publish Topic</h2>

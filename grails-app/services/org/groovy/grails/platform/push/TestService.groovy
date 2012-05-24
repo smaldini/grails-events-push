@@ -31,18 +31,14 @@ import grails.events.Listener
  */
 class TestService {
 
+    //Listen for sampleBro events, the TestEvents.groovy DSL will configure this topic to observe clients by using scope : 'browser'
     @Listener('sampleBro')
     def testEvent(test) {
 
         println """--> $test"""
         def ts=new TestDomain(name:'test')
-        println ts
-        ts.save()
-        println ts
-    }
 
-    @Listener("onSave")
-    def testSave(test){
-        println test
+        ts.save() //This will trigger the GORM event 'afterInsert' where we have allowed for client listeners in TestEvents.groovy.
+        //any browsers using grailsEvents.on('afterInsert', function(data){...}); will receive a JSON from TestDomain
     }
 }

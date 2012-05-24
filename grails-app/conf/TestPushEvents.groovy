@@ -17,7 +17,12 @@
  */
 
 events = {
-    //"sampleHello" scope:'browser'
-    "sampleBro"  browser:true, scope:"*"
-    "afterInsert"  browser:true
+    "sampleBro" browser: true, //Will allow client to register for events push
+            scope: "*" //Will allow both server and client to send events on this topic due to scope:'*'
+
+    /*
+    Will allow client to register for events push, every GORM afterInsert events will be
+    propagated
+    */
+    "afterInsert" browser: true
 }
