@@ -1,7 +1,7 @@
 grails-events-push
 ==================
 
-Events-push is a client-side events bus based on the portable push library Atmosphere and Grails platform-core plugin for events
+Events-push is a client-side events bus based on the superbe portable push library [Atmosphere](https://github.com/Atmosphere/atmosphere)  and [Grails platform-core](https://github.com/grailsrocks/grails-platform-core) plugin for events
 propagation/listening. It simply allows your client to listen to server-side events and push data. It uses WebSockets by default
 and failbacks to Comet method if required (server not compliant, browser too old...).
 Events-push is a white-list broadcaster (client-side events scope is 'browser'). You will need to define which events can be
