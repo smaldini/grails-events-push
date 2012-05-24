@@ -137,7 +137,7 @@ var grails = grails || {};
             };
 
             function checkOpen() {
-                if (state != grails.Events.OPEN) {
+                if (state != grails.Events.CONNECTING && state != grails.Events.OPEN) {
                     throw new Error('INVALID_STATE_ERR');
                 }
             }
