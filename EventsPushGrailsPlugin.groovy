@@ -66,7 +66,7 @@ someView.gsp >
  var grailsEvents = new grails.Events("http://localhost:8080/app/g-eventspush");
  grailsEvents.send('saveTodo', data); //will send data to server topic 'saveTodo'
  grailsEvents.on('savedTodo', function(data){...}); //will listen for server events on 'savedTodo' topic
-</r:script
+</r:script>
 '''
 
     // URL to the plugin's documentation
