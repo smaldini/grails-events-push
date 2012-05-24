@@ -28,11 +28,11 @@ MyService.groovy >
 ```
 
 someView.gsp >
-````gsp
+```gsp
 <r:require module="grailsEvents"/>
 <r:script>
  var grailsEvents = new grails.Events("http://localhost:8080/app/");
  grailsEvents.send('saveTodo', data); //will send data to server topic 'saveTodo'
  grailsEvents.on('savedTodo', function(data){...}); //will listen for server events on 'savedTodo' topic
 </r:script>
-``
+```

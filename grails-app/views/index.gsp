@@ -12,81 +12,63 @@
         return ev.keyCode;
       }
 
-      function getElementById() {
-        return document.getElementById(arguments[0]);
-      }
-
       function subscribe() {
-        grailsEvents.on(getElementById('topic').value, function (data) {
-          $("ul").append("<div>" + data.message + "</div>")
+        grailsEvents.on($('#topic').val(), function (data) {
+          $("#messages").append("<div>" + data.message + "</div>")
         });
         grailsEvents.on("afterInsert", function (data) {
-          $("ul").append("<div>" + data.id + "</div>");
+          $("#messages").append("<div>" + $.stringifyJSON(data) + "</div>");
         });
-      }
-
-      function getElementByIdValue() {
-        detectedTransport = null;
-        return document.getElementById(arguments[0]).value;
-      }
-
-      function unsubscribe() {
-        grailsEvents.close();
       }
 
       function connect() {
-        getElementById('phrase').value = '';
-        getElementById('sendMessage').className = '';
-        getElementById('phrase').focus();
+        $('#phrase').val('');
+        $('#sendMessage').attr('class','');
+        $('#phrase').focus();
         subscribe();
-        getElementById('connect').value = "Switch transport";
+        $('#connect').val("Switch transport");
       }
 
-      getElementById('connect').onclick = function (event) {
-        if (getElementById('topic').value == '') {
+      $('#connect').click(function (event) {
+        if ($('#topic').val() == '') {
           alert("Please enter a PubSub topic to subscribe");
           return;
         }
         connect();
-      }
+      });
 
-      getElementById('topic').onkeyup = function (event) {
-        getElementById('sendMessage').className = 'hidden';
+      $('#topic').keyup(function (event) {
+        $('#sendMessage').attr('class','hidden');
         var keyc = getKeyCode(event);
         if (keyc == 13 || keyc == 10) {
           connect();
           return false;
         }
-      }
+      });
 
-      getElementById('phrase').setAttribute('autocomplete', 'OFF');
-      getElementById('phrase').onkeyup = function (event) {
+      $('#phrase').attr('autocomplete', 'OFF');
+      $('#phrase').keyup(function (event) {
         var keyc = getKeyCode(event);
         if (keyc == 13 || keyc == 10) {
-
-          grailsEvents.send(getElementById('topic').value, {message:getElementByIdValue('phrase')});
-
-          getElementById('phrase').value = '';
+          grailsEvents.send($('#topic').val(), {message:$('#phrase').val()});
+          $('#phrase').val('');
           return false;
         }
         return true;
-      };
+      });
 
-      getElementById('send_message').onclick = function (event) {
-        if (getElementById('topic').value == '') {
+      $('#send_message').click(function (event) {
+        if ($('#topic').val() == '') {
           alert("Please enter a message to publish");
           return;
         }
-
-
-        grailsEvents.send(getElementById('topic').value, {message:getElementByIdValue('phrase')});
-
-        getElementById('phrase').value = '';
+        grailsEvents.send($('#topic').val(), {message:$('#phrase').val()});
+        $('#phrase').val('');
         return false;
-      };
+      });
 
 
-      getElementById('topic').focus();
+      $('#topic').focus();
     });
   </r:script>
 </head>
@@ -110,6 +92,6 @@
 <br/>
 
 <h2>Real Time PubSub Update</h2>
-<ul></ul>
+<ul id='messages'></ul>
 </body>
 </html>
