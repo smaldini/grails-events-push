@@ -30,7 +30,7 @@ var grails = grails || {};
             that.path = (path && (typeof path == "string")) ? path : "g-eventsbus";
 
             var hasOptions = (options && (typeof options == "object"));
-            that.globalTopicName = hasOptions && options.globalTopicName && (typeof options.globalTopicName == "string") ? options.globalTopicName : "events-push-topic";
+            that.globalTopicName = hasOptions && options.globalTopicName && (typeof options.globalTopicName == "string") ? options.globalTopicName : "eventsbus";
             that.transport = hasOptions && options.transport && (typeof options.transport == "string") ? options.transport : "websocket";
 
 

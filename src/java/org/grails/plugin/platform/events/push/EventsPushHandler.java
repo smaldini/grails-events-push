@@ -182,7 +182,7 @@ public class EventsPushHandler extends HttpServlet {
             m.suspend(-1);
         }
 
-        res.getOutputStream().write(("{\"clientId\":\""+uuid+"\"}").getBytes());
+        res.getOutputStream().write(("{\"topic\":\""+GLOBAL_TOPIC+"\",\"clientId\":\""+uuid+"\"}").getBytes());
         res.getOutputStream().flush();
 
     }
@@ -196,31 +196,6 @@ public class EventsPushHandler extends HttpServlet {
         }
         final JSONElement body = element.has("body") ? (JSONElement) element.get("body") : null;
         grailsEvents._eventAsync(PUSH_SCOPE, topic, body != null ? body : element);
-
-        /*
-        EventReply reply = grailsEvents._event(null, topic, body != null ? body : element);
-        int replySize = reply.size();
-        if (replySize > 0) {
-            int i = 0;
-            List<String> toReply = new ArrayList<String>();
-            try {
-                for (Object data : reply.getValues()) {
-                    if (JSONElement.class.isAssignableFrom(data.getClass())) {
-                        toReply.add(data.toString() + (i < replySize ? "," : ""));
-                    }
-                    i++;
-                }
-            } catch (ExecutionException e) {
-                log.error("", e);
-            } catch (InterruptedException e) {
-                log.error("", e);
-            }
-            if (toReply.size() > 0) {
-                //res.getOutputStream().write();
-            }
-
-        }*/
-
     }
 
     private String extractTopic(String pathInfo) {
