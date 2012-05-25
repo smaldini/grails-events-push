@@ -5,6 +5,7 @@ grails.project.target.level = 1.6
 //grails.project.war.file = "target/${appName}-${appVersion}.war"
 grails.tomcat.nio = true
 
+
 if (appName == 'events-push') {
     grails.plugin.location.'pluginPlatform' = '../../platform-core'
 }

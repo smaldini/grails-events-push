@@ -39,6 +39,7 @@ var grails = grails || {};
             that.onglobalmessage = null;
             that.onclose = null;
             var handlerMap = {};
+            var handlerQueue = [];
 
             that.send = function (topic, message) {
                 checkSpecified("topic", 'string', topic);
@@ -51,64 +52,44 @@ var grails = grails || {};
                 that.globalTopicSocket.push({data:$.stringifyJSON(envelope)});
             };
 
-            that.on = function (topic, handler, init) {
+            that.on = function (topic, handler, initRequest) {
                 checkSpecified("topic", 'string', topic);
                 checkSpecified("handler", 'function', handler);
 
-                var request = {};
-
-                if (init) {
-                    socket.onOpen = function () {
-                        state = grails.Events.OPEN;
-                        if (that.onopen) {
-                            that.onopen();
-                        }
-                    };
-                    request.onClose = function () {
-                        state = grails.Events.CLOSED;
-                        if (that.onclose) {
-                            that.onclose();
-                        }
-                    };
-                } else {
-                    checkOpen();
-                }
-
                 var handlers = handlerMap[topic];
                 if (!handlers) {
-                    handlers = [handler];
-                    handlerMap[topic] = handlers;
-
-                    request.url = that.root + '/' + that.path + '/' + topic;
-                    request.transport = that.transport;
-                    request.onMessage = function (response) {
-                        if (response.status == 200) {
-                            var data = {};
-                            if (response.responseBody.length > 0) {
-                                data = $.parseJSON(response.responseBody).body;
-                                var handlers = handlerMap[topic];
-                                if (handlers) {
-                                    // We make a copy since the handler might get unregistered from within the
-                                    // handler itself, which would screw up our iteration
-                                    var copy = handlers.slice(0);
-                                    for (var i = 0; i < copy.length; i++) {
-                                        copy[i](data);
-                                    }
-                                }
-                            }
+                    var request = initRequest ? initRequest : {};
+                    var connectLater = false;
+                    if (!initRequest) {
+                        try {
+                            checkOpen();
+                            request.headers = {'topic':topic, 'Events-uuid':that.clientId};
+                        } catch (err) {
+                            connectLater = true;
                         }
-                    };
-                    return socket.subscribe(request);
+                    }
+                    if (!connectLater) {
+                        handlers = [handler];
+                        handlerMap[topic] = handlers;
+
+                        request.url = that.root + '/' + that.path + '/' + topic;
+                        request.transport = request.transport ? request.transport : that.transport;
+
+                        return socket.subscribe(request);
+                    } else {
+                        handlerQueue[topic] = handler;
+                    }
                 } else {
                     handlers[handlers.length] = handler;
                 }
             };
 
-            that.globalTopicSocket = that.on(that.globalTopicName, function (data) {
-                if (that.onglobalmessage) {
-                    that.onglobalmessage(data);
+            var connecting = function (e) {
+                state = grails.Events.OPEN;
+                if (that.onopen) {
+                    that.onopen();
                 }
-            }, true);
+            };
 
             that.unregisterHandler = function (topic, handler) {
                 checkSpecified("topic", 'string', topic);
@@ -136,8 +117,49 @@ var grails = grails || {};
                 return state;
             };
 
+            var request = {};
+
+            request.onOpen = connecting;
+            request.onReconnect = connecting;
+            request.onClose = function (e) {
+                state = grails.Events.CLOSED;
+                if (that.onclose) {
+                    that.onclose();
+                }
+            };
+
+            request.onMessage = function (response) {
+                if (response.status == 200) {
+                    var data;
+                    if (response.responseBody.length > 0) {
+                        data = $.parseJSON(response.responseBody);
+                        var handlers = handlerMap[data.topic ? data.topic : that.globalTopicName];
+                        if (handlers) {
+                            // We make a copy since the handler might get unregistered from within the
+                            // handler itself, which would screw up our iteration
+                            var copy = handlers.slice(0);
+                            for (var i = 0; i < copy.length; i++) {
+                                copy[i](data.body, data);
+                            }
+                        }
+                    }
+                }
+            };
+
+            that.globalTopicSocket = that.on(that.globalTopicName, function (data, e) {
+                that.clientId = e.clientId;
+                debugger;
+                for (var topic in handlerQueue) {
+                    that.on(topic, handlerQueue[topic]);
+                }
+                handlerQueue = [];
+                if (that.onglobalmessage) {
+                    that.onglobalmessage(data);
+                }
+            }, request);
+
             function checkOpen() {
-                if (state != grails.Events.CONNECTING && state != grails.Events.OPEN) {
+                if (state != grails.Events.OPEN) {
                     throw new Error('INVALID_STATE_ERR');
                 }
             }
@@ -151,8 +173,7 @@ var grails = grails || {};
                 }
             }
 
-        }
-        ;
+        };
 
         grails.Events.CONNECTING = 0;
         grails.Events.OPEN = 1;

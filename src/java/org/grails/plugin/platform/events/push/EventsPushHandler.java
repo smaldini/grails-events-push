@@ -38,10 +38,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Stephane Maldini <smaldini@doc4web.com>
@@ -61,7 +58,10 @@ public class EventsPushHandler extends HttpServlet {
     private GrailsApplication grailsApplication;
     private BroadcasterFactory broadcasterFactory;
 
+    public static final String EVENTS_TOPIC_HEADER = "topic";
     public static final String ID_GRAILSEVENTS = "grailsEvents";
+    public static final String EVENTS_UUID_ATTR = "Events-uuid";
+    public static final String GLOBAL_TOPIC = "eventsbus";
     public static final String PUSH_SCOPE = "browser";
     public static final String CLIENT_BROADCAST_PARAM = "browser";
 
@@ -122,7 +122,7 @@ public class EventsPushHandler extends HttpServlet {
         public void broadcastEvent(Object message) {
             if (message != null) {
                 Map<String, Object> jsonResponse = new HashMap<String, Object>();
-                jsonResponse.put("topic",b.getID());
+                jsonResponse.put("topic", b.getID());
                 jsonResponse.put("body", message);
                 b.broadcast(new JSON(jsonResponse).toString());
             }
@@ -141,21 +141,49 @@ public class EventsPushHandler extends HttpServlet {
         //res.setContentType("text/html;charset=ISO-8859-1");
 
 
-        Broadcaster b = broadcasterFactory.lookup(extractTopic(req.getPathInfo()));
-        if (b == null) {
+        Broadcaster defaultBroadcaster = broadcasterFactory.lookup(GLOBAL_TOPIC);
+        if (m == null || defaultBroadcaster == null) {
             res.sendError(403);
             return;
         }
 
-        m.setBroadcaster(b);
+        m.setBroadcaster(defaultBroadcaster);
 
         String header = req.getHeader(HeaderConfig.X_ATMOSPHERE_TRANSPORT);
+        String topic = req.getHeader(EVENTS_TOPIC_HEADER);
+        if (topic != null) {
+            AtmosphereResource resource = null;
+            String uuid = null;
+            for (AtmosphereResource atmosphereResource : defaultBroadcaster.getAtmosphereResources()) {
+                uuid = (String) atmosphereResource.getRequest().getAttribute(EVENTS_UUID_ATTR);
+                if (uuid != null && uuid.equalsIgnoreCase(req.getHeader(EVENTS_UUID_ATTR))) {
+                    resource = atmosphereResource;
+                    break;
+                }
+            }
+            Broadcaster b = broadcasterFactory.lookup(topic);
+            if (b == null || resource == null) {
+                res.sendError(403);
+                return;
+            }
+            b.addAtmosphereResource(resource);
+            return;
+        }
+
+
+        String uuid = UUID.randomUUID().toString();
+        req.setAttribute(EVENTS_UUID_ATTR, uuid);
+        res.setHeader(EVENTS_UUID_ATTR, uuid);
+
         if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
             req.setAttribute(ApplicationConfig.RESUME_ON_BROADCAST, Boolean.TRUE);
             m.suspend(-1, false);
         } else {
             m.suspend(-1);
         }
+
+        res.getOutputStream().write(("{\"clientId\":\""+uuid+"\"}").getBytes());
+        res.getOutputStream().flush();
 
     }
 

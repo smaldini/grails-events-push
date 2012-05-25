@@ -20,7 +20,7 @@ import org.codehaus.groovy.grails.commons.ConfigurationHolder
 
 eventCompileEnd = {
     if (!isPluginProject) {
-        println 'checking sitemesh decorators for events-bus'
+        grailsConsole.updateStatus 'checking sitemesh decorators for events-bus'
         buildConfiguration(basedir)
     }
 }
