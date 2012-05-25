@@ -131,23 +131,14 @@ public class EventsPushHandler extends HttpServlet {
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        // Create a Meteor
-        Meteor m = Meteor.build(req);
-
-        // Log all events on the console, including WebSocket events.
-        if (log.isDebugEnabled())
-            m.addListener(new WebSocketEventListenerAdapter());
-
         //res.setContentType("text/html;charset=ISO-8859-1");
 
 
         Broadcaster defaultBroadcaster = broadcasterFactory.lookup(GLOBAL_TOPIC);
-        if (m == null || defaultBroadcaster == null) {
+        if (defaultBroadcaster == null) {
             res.sendError(403);
             return;
         }
-
-        m.setBroadcaster(defaultBroadcaster);
 
         String header = req.getHeader(HeaderConfig.X_ATMOSPHERE_TRANSPORT);
         String topic = req.getHeader(EVENTS_TOPIC_HEADER);
@@ -174,6 +165,15 @@ public class EventsPushHandler extends HttpServlet {
         String uuid = UUID.randomUUID().toString();
         req.setAttribute(EVENTS_UUID_ATTR, uuid);
         res.setHeader(EVENTS_UUID_ATTR, uuid);
+
+          // Create a Meteor
+        Meteor m = Meteor.build(req);
+
+        // Log all events on the console, including WebSocket events.
+        if (log.isDebugEnabled())
+            m.addListener(new WebSocketEventListenerAdapter());
+
+        m.setBroadcaster(defaultBroadcaster);
 
         if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
             req.setAttribute(ApplicationConfig.RESUME_ON_BROADCAST, Boolean.TRUE);

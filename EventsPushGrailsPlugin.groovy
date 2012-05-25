@@ -17,6 +17,7 @@
  */
 
 import org.grails.plugin.platform.events.push.EventsPushHandler
+import org.grails.plugin.platform.events.push.GrailsMeteorServlet
 
 class EventsPushGrailsPlugin {
     // the plugin version
@@ -97,13 +98,7 @@ someView.gsp >
             'servlet' {
                 'description'('MeteorServlet')
                 'servlet-name'('MeteorServlet')
-                'servlet-class'('org.atmosphere.cpr.MeteorServlet')
-                if (!config?.servlet?.initParams?.'org.atmosphere.servlet') {
-                    'init-param' {
-                        'param-name'('org.atmosphere.servlet')
-                        'param-value'(EventsPushHandler.name)
-                    }
-                }
+                'servlet-class'(GrailsMeteorServlet.name)
                 if (!config?.servlet?.initParams?.'org.atmosphere.useWebSocket') {
                     'init-param' {
                         'param-name'('org.atmosphere.useWebSocket')

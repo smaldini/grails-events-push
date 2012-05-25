@@ -148,7 +148,6 @@ var grails = grails || {};
 
             that.globalTopicSocket = that.on(that.globalTopicName, function (data, e) {
                 that.clientId = e.clientId;
-                debugger;
                 for (var topic in handlerQueue) {
                     that.on(topic, handlerQueue[topic]);
                 }
