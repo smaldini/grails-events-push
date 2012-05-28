@@ -960,7 +960,6 @@ jQuery.atmosphere = function() {
                         }
 
                         rq.readyState = ajaxRequest.readyState;
-
                         if (ajaxRequest.readyState == 4) {
                             if (jQuery.browser.msie) {
                                 update = true;
@@ -991,6 +990,7 @@ jQuery.atmosphere = function() {
                                 } catch (e) {
                                 }
                             }
+
 
                             this.previousLastIndex = rq.lastIndex;
                             if (rq.transport == 'streaming') {

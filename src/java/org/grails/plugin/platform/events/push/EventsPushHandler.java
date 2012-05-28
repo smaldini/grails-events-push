@@ -38,7 +38,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Stephane Maldini <smaldini@doc4web.com>
@@ -58,9 +61,8 @@ public class EventsPushHandler extends HttpServlet {
     private GrailsApplication grailsApplication;
     private BroadcasterFactory broadcasterFactory;
 
-    public static final String EVENTS_TOPIC_HEADER = "topic";
     public static final String ID_GRAILSEVENTS = "grailsEvents";
-    public static final String EVENTS_UUID_ATTR = "Events-uuid";
+    public static final String TOPICS_HEADER = "topics";
     public static final String GLOBAL_TOPIC = "eventsbus";
     public static final String PUSH_SCOPE = "browser";
     public static final String CLIENT_BROADCAST_PARAM = "browser";
@@ -134,40 +136,35 @@ public class EventsPushHandler extends HttpServlet {
         //res.setContentType("text/html;charset=ISO-8859-1");
 
 
-        Broadcaster defaultBroadcaster = broadcasterFactory.lookup(GLOBAL_TOPIC);
+        Broadcaster defaultBroadcaster = broadcasterFactory.lookup(extractTopic(req.getPathInfo()));
         if (defaultBroadcaster == null) {
             res.sendError(403);
             return;
         }
 
         String header = req.getHeader(HeaderConfig.X_ATMOSPHERE_TRANSPORT);
-        String topic = req.getHeader(EVENTS_TOPIC_HEADER);
-        if (topic != null) {
-            AtmosphereResource resource = null;
-            String uuid = null;
-            for (AtmosphereResource atmosphereResource : defaultBroadcaster.getAtmosphereResources()) {
-                uuid = (String) atmosphereResource.getRequest().getAttribute(EVENTS_UUID_ATTR);
-                if (uuid != null && uuid.equalsIgnoreCase(req.getHeader(EVENTS_UUID_ATTR))) {
-                    resource = atmosphereResource;
-                    break;
-                }
-            }
-            Broadcaster b = broadcasterFactory.lookup(topic);
-            if (b == null || resource == null) {
+        String _topics = req.getHeader(TOPICS_HEADER);
+        if (_topics == null)
+            return;
+
+        String[] topics = _topics.split(",");
+
+        // Create a Meteor
+        Meteor m = Meteor.build(req);
+
+        Broadcaster b;
+        for (String topic : topics) {
+            if(topic.equals(GLOBAL_TOPIC))
+                continue;
+
+            b = broadcasterFactory.lookup(topic);
+            if (b == null) {
                 res.sendError(403);
                 return;
             }
-            b.addAtmosphereResource(resource);
-            return;
+
+            b.addAtmosphereResource(m.getAtmosphereResource());
         }
-
-
-        String uuid = UUID.randomUUID().toString();
-        req.setAttribute(EVENTS_UUID_ATTR, uuid);
-        res.setHeader(EVENTS_UUID_ATTR, uuid);
-
-          // Create a Meteor
-        Meteor m = Meteor.build(req);
 
         // Log all events on the console, including WebSocket events.
         if (log.isDebugEnabled())
@@ -178,13 +175,12 @@ public class EventsPushHandler extends HttpServlet {
         if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
             req.setAttribute(ApplicationConfig.RESUME_ON_BROADCAST, Boolean.TRUE);
             m.suspend(-1, false);
+            //m.broadcast(buildResponse);
         } else {
             m.suspend(-1);
+            /*res.getOutputStream().write((buildResponse).getBytes());
+            res.getOutputStream().flush();*/
         }
-
-        res.getOutputStream().write(("{\"topic\":\""+GLOBAL_TOPIC+"\",\"clientId\":\""+uuid+"\"}").getBytes());
-        res.getOutputStream().flush();
-
     }
 
     public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
