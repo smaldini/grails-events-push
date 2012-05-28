@@ -125,7 +125,6 @@ someView.gsp >
     }
 
     def onChange = { event ->
-
         if (application.isArtefactOfType('Events', event.source)) {
             EventsPushHandler.registerTopics(event.ctx.grailsEventsRegistry, event.ctx.grailsEvents)
         }
