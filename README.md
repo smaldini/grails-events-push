@@ -36,3 +36,6 @@ someView.gsp >
  grailsEvents.on('savedTodo', function(data){...}); //will listen for server events on 'savedTodo' topic
 </r:script>
 ```
+
+You can find a full sample using [Events-si](https://github.com/smaldini/grails-events-si), RabbitMQ, BackboneJS, coffeescript and CloudFoundry in
+[Grails Todo repositry](https://github.com/smaldini/grailsTodos).
