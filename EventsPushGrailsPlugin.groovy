@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
+import org.atmosphere.cache.HeaderBroadcasterCache
 import org.grails.plugin.platform.events.push.EventsPushHandler
 import org.grails.plugin.platform.events.push.GrailsMeteorServlet
-import org.atmosphere.cache.HeaderBroadcasterCache
 
 class EventsPushGrailsPlugin {
     // the plugin version
@@ -106,12 +106,12 @@ someView.gsp >
                         'param-value'(true)
                     }
                 }
-                  /*if (!config?.servlet?.initParams?.'org.atmosphere.cpr.broadcasterCacheClass') {
+                if (!config?.servlet?.initParams?.'org.atmosphere.cpr.broadcasterCacheClass') {
                     'init-param' {
                         'param-name'('org.atmosphere.cpr.broadcasterCacheClass')
                         'param-value'(HeaderBroadcasterCache.name)
                     }
-                }*/
+                }
                 config?.servlet?.initParams.each { initParam ->
                     'init-param' {
                         'param-name'(initParam.key)
