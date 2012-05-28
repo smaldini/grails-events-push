@@ -18,6 +18,7 @@
 package org.grails.plugin.platform.events.push;
 
 import grails.converters.JSON;
+import org.atmosphere.cache.HeaderBroadcasterCache;
 import org.atmosphere.cpr.*;
 import org.atmosphere.websocket.WebSocketEventListenerAdapter;
 import org.codehaus.groovy.grails.commons.ApplicationAttributes;
@@ -119,6 +120,7 @@ public class EventsPushHandler extends HttpServlet {
 
         public BroadcastEventWrapper(String topic) {
             this.b = BroadcasterFactory.getDefault().lookup(topic, true);
+            this.b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
         }
 
         public void broadcastEvent(Object message) {
@@ -154,16 +156,13 @@ public class EventsPushHandler extends HttpServlet {
 
         Broadcaster b;
         for (String topic : topics) {
-            if(topic.equals(GLOBAL_TOPIC))
+            if (topic.equals(GLOBAL_TOPIC))
                 continue;
 
             b = broadcasterFactory.lookup(topic);
-            if (b == null) {
-                res.sendError(403);
-                return;
+            if (b != null) {
+                b.addAtmosphereResource(m.getAtmosphereResource());
             }
-
-            b.addAtmosphereResource(m.getAtmosphereResource());
         }
 
         // Log all events on the console, including WebSocket events.

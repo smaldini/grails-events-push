@@ -16,13 +16,12 @@
  * limitations under the License.
  */
 
-import org.atmosphere.cache.HeaderBroadcasterCache
 import org.grails.plugin.platform.events.push.EventsPushHandler
 import org.grails.plugin.platform.events.push.GrailsMeteorServlet
 
 class EventsPushGrailsPlugin {
     // the plugin version
-    def version = "1.0.M1"
+    def version = "1.0.M1-SNAPSHOT"
     // the version or versions of Grails the plugin is designed for
     def grailsVersion = "2.0 > *"
     // the other plugins this plugin depends on
@@ -104,12 +103,6 @@ someView.gsp >
                     'init-param' {
                         'param-name'('org.atmosphere.useWebSocket')
                         'param-value'(true)
-                    }
-                }
-                if (!config?.servlet?.initParams?.'org.atmosphere.cpr.broadcasterCacheClass') {
-                    'init-param' {
-                        'param-name'('org.atmosphere.cpr.broadcasterCacheClass')
-                        'param-value'(HeaderBroadcasterCache.name)
                     }
                 }
                 config?.servlet?.initParams.each { initParam ->

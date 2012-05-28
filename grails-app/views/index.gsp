@@ -9,7 +9,7 @@
        Register a grailsEvents handler for this window, constructor can take a root URL,
        a path to event-bus servlet and options. There are sensible defaults for each argument
        */
-      var grailsEvents = new grails.Events(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + "/events-push");
+      var grailsEvents = new grails.Events("${createLink(uri:'')}", null, {transport:'long-polling'});
 
       /*
        Add a listener for the topic from first input + a listener on afterInsert topic.
@@ -21,9 +21,9 @@
         grailsEvents.on($('#topic').val(), function (data) {
           $("#messages").append("<div>" + data.message + "</div>")
         });
-        grailsEvents.on("afterInsert", function (data) {
+        /*grailsEvents.on("afterInsert", function (data) {
           $("#messages").append("<div>" + $.stringifyJSON(data) + "</div>");
-        });
+        });*/
       }
 
       function getKeyCode(ev) {
