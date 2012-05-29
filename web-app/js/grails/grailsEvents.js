@@ -57,7 +57,7 @@ var grails = grails || {};
                 checkSpecified("handler", 'function', handler);
 
                 var handlers = handlerMap[topic];
-                if (!handlers || request) {
+                if (!handlers || request) {
 
                     handlers = [handler];
                     handlerMap[topic] = handlers;
@@ -116,11 +116,11 @@ var grails = grails || {};
                 var request = {};
 
                 var connecting = function () {
-                                state = grails.Events.OPEN;
-                                if (that.onopen) {
-                                    that.onopen();
-                                }
-                            };
+                    state = grails.Events.OPEN;
+                    if (that.onopen) {
+                        that.onopen();
+                    }
+                };
 
                 request.onOpen = connecting;
                 request.onReconnect = connecting;
@@ -147,6 +147,9 @@ var grails = grails || {};
                                 }
                             }
                         }
+                    } else if (response.status == 504) {
+                        socket.unsubscribeUrl(that.root + '/' + that.path + '/' + that.globalTopicName);
+                        init();
                     }
                 };
 
