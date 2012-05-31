@@ -109,7 +109,7 @@ public class EventsPushHandler extends HttpServlet {
 
             if (topic != null && ((Boolean) broadcastClient) &&
                     !doneTopics.contains(topic)) {
-                eventsRegistry.addListener(eventDefinition.getScope(), topic, new BroadcastEventWrapper(topic), m, eventDefinition.getFilter());
+                eventsRegistry.addListener(eventDefinition.getScope(), topic, new BroadcastEventWrapper(topic), m, eventDefinition);
                 doneTopics.add(topic);
             }
         }
