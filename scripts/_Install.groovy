@@ -1,19 +1,17 @@
 // Write the context.xml file in META-INF and WEB-INF
 def contextDotXml = """\
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <Context>
-    <Loader delegate="true"/>
+    <Loader delegate=\"true\"/>
 </Context>"""
+def metaInf = new File("$basedir/web-app/META-INF/")
+def webInf = new File("$basedir/web-app/WEB-INF/")
 
-def webAppDir = new File(grailsSettings.baseDir, "web-app")
-def webInfDir = new File(webAppDir, "WEB-INF")
-def metaInfDir = new File(webAppDir, "META-INF")
+if(!metaInf.exists())
+    metaInf.mkdirs()
 
-if (!webInfDir.exists())) {
-    event "StatusUpdate", [ "Your project does not have a 'web-app/WEB-INF' directory. Perhaps it's corrupt?" ]
-}
+if(!webInf.exists())
+    webInf.mkdirs()
 
-webInfDir.mkdirs()
-metaInfDir.mkdirs()
-new File(webInfDir, "context.xml").write contextDotXml
-new File(metaInfDir, "context.xml").write contextDotXml
+new File(metaInf, "context.xml").write contextDotXml
+new File(webInf, "context.xml").write contextDotXml

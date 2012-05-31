@@ -39,7 +39,6 @@ var grails = grails || {};
             that.onglobalmessage = null;
             that.onclose = null;
             var handlerMap = {};
-            var handlerQueue = [];
 
             that.send = function (topic, message) {
                 checkSpecified("topic", 'string', topic);
@@ -136,7 +135,7 @@ var grails = grails || {};
                     if (response.status == 200) {
                         var data;
                         if (response.responseBody.length > 0) {
-                            data = $.parseJSON(response.responseBody);
+                            data = jQuery.parseJSON(response.responseBody);
                             var handlers = handlerMap[data.topic ? data.topic : that.globalTopicName];
                             if (handlers) {
                                 // We make a copy since the handler might get unregistered from within the
