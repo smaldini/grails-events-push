@@ -19,26 +19,26 @@ package org.groovy.grails.platform.push
 
 import grails.events.Listener
 
+
 /**
  * @file
  * @author Stephane Maldini <smaldini@doc4web.com>
  * @version 1.0
  * @date 21/05/12
-
  * @section DESCRIPTION
  *
  * [Does stuff]
  */
 class TestService {
 
-    //Listen for sampleBro events, the TestEvents.groovy DSL will configure this topic to observe clients by using scope : 'browser'
-    @Listener('sampleBro')
-    def testEvent(test) {
+	//Listen for sampleBro events, the TestEvents.groovy DSL will configure this topic to observe clients by using scope : 'browser'
+	@Listener('sampleBro')
+	def testEvent(test) {
 
-        println """--> $test"""
-        def ts=new TestDomain(name:'test')
+		println """--> $test"""
+		def ts=new TestDomain(name:'test')
 
-        ts.save() //This will trigger the GORM event 'afterInsert' where we have allowed for client listeners in TestEvents.groovy.
-        //any browsers using grailsEvents.on('afterInsert', function(data){...}); will receive a JSON from TestDomain
-    }
+		ts.save() //This will trigger the GORM event 'afterInsert' where we have allowed for client listeners in TestEvents.groovy.
+		//any browsers using grailsEvents.on('afterInsert', function(data){...}); will receive a JSON from TestDomain
+	}
 }

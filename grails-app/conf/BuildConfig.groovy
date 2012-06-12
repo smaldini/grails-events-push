@@ -8,7 +8,7 @@ grails.tomcat.nio = true
 
 
 if (appName == 'events-push') {
-    grails.plugin.location.'pluginPlatform' = '../../platform-core'
+    grails.plugin.location.'pluginPlatform' = "../../platform-core"
 }
 
 grails.project.dependency.resolution = {
@@ -26,10 +26,10 @@ grails.project.dependency.resolution = {
         //mavenRepo "http://repository.codehaus.org"
         //mavenRepo "http://download.java.net/maven/2/"
         //mavenRepo "http://repository.jboss.com/maven2/"
-        mavenRepo "https://oss.sonatype.org/content/repositories/snapshots"
+        mavenRepo "https://oss.sonatype.org/content/repositories/releases"
     }
     dependencies {
-        compile('org.atmosphere:atmosphere-runtime:1.0.0-SNAPSHOT') {
+        compile('org.atmosphere:atmosphere-runtime:1.0.0.beta1') {
             excludes 'slf4j-api', 'atmosphere-ping'
         }
     }
@@ -40,13 +40,13 @@ grails.project.dependency.resolution = {
         }
 
         build(":tomcat:$grailsVersion",
-                ":release:2.0.1",
+                ":release:2.0.2",
                 ":hibernate:$grailsVersion"
         ) {
             export = false
         }
         if (appName != 'events-push') {
-            compile ':platform-core:1.0.M2d-SNAPSHOT'
+            compile ':platform-core:1.0.M2f-SNAPSHOT'
         }
     }
 }

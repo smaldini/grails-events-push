@@ -1,5 +1,4 @@
 import org.groovy.grails.platform.push.TestDomain
-
 /* Copyright 2011-2012 the original author or authors:
 *
 *    Marc Palmer (marc@grailsrocks.com)

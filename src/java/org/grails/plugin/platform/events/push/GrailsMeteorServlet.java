@@ -1,13 +1,13 @@
 package org.grails.plugin.platform.events.push;
 
-import org.atmosphere.cpr.MeteorServlet;
-import org.atmosphere.handler.ReflectorServletProcessor;
+import static org.atmosphere.cpr.ApplicationConfig.MAPPING;
+import static org.atmosphere.cpr.ApplicationConfig.SERVLET_CLASS;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 
-import static org.atmosphere.cpr.ApplicationConfig.MAPPING;
-import static org.atmosphere.cpr.ApplicationConfig.SERVLET_CLASS;
+import org.atmosphere.cpr.MeteorServlet;
+import org.atmosphere.handler.ReflectorServletProcessor;
 
 /**
  * @author Stephane Maldini <smaldini@doc4web.com>
