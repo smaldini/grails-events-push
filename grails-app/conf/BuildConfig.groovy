@@ -39,6 +39,7 @@ grails.project.dependency.resolution = {
             export = false
         }
 
+		runtime(":resources:1.2-RC1")
         build(":tomcat:$grailsVersion",
                 ":release:2.0.2",
                 ":hibernate:$grailsVersion"
