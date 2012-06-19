@@ -2,7 +2,8 @@ grails.servlet.version = "2.5" // Change depending on target container complianc
 grails.project.class.dir = "target/classes"
 grails.project.test.class.dir = "target/test-classes"
 grails.project.test.reports.dir = "target/test-reports"
-grails.project.target.level = 1.6
+grails.project.target.level = 1.5
+grails.project.source.level = 1.5
 //grails.project.war.file = "target/${appName}-${appVersion}.war"
 grails.tomcat.nio = true
 
@@ -37,7 +38,7 @@ grails.project.dependency.resolution = {
 
         runtime(":resources:1.2-RC1")
         build(":tomcat:$grailsVersion",
-                ":release:2.0.2",
+                ":release:2.0.3",
                 ":hibernate:$grailsVersion"
         ) {
             export = false
