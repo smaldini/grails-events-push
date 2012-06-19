@@ -7,10 +7,6 @@ grails.project.target.level = 1.6
 grails.tomcat.nio = true
 
 
-if (appName == 'events-push') {
-    grails.plugin.location.'pluginPlatform' = "../../platform-core"
-}
-
 grails.project.dependency.resolution = {
     // inherit Grails' default dependencies
     inherits("global") {
@@ -35,19 +31,17 @@ grails.project.dependency.resolution = {
     }
 
     plugins {
-        runtime(":jquery:1.7.1"){
+        runtime(":jquery:1.7.1") {
             export = false
         }
 
-		runtime(":resources:1.2-RC1")
+        runtime(":resources:1.2-RC1")
         build(":tomcat:$grailsVersion",
                 ":release:2.0.2",
                 ":hibernate:$grailsVersion"
         ) {
             export = false
         }
-        if (appName != 'events-push') {
-            compile ':platform-core:1.0.M2f-SNAPSHOT'
-        }
+        compile ':platform-core:1.0.M2f-SNAPSHOT'
     }
 }
