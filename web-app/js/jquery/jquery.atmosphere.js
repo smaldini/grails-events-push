@@ -97,6 +97,7 @@ jQuery.atmosphere = function() {
                 trackMessageLength : false ,
                 messageDelimiter : '|',
                 connectTimeout : -1,
+                reconnectInterval : 0,
                 dropAtmosphereHeaders : false,
                 onError : function(response) {
                 },
@@ -793,7 +794,9 @@ jQuery.atmosphere = function() {
                 if (_request.reconnect && _request.transport != 'none' || _request.transport == null) {
                     _request.method = _request.fallbackMethod;
                     _response.transport = _request.fallbackTransport;
-                    _execute();
+                    _request.id = setTimeout(function() {
+                        _execute();
+                    }, _request.reconnectInterval);
                 }
             }
 
@@ -936,9 +939,7 @@ jQuery.atmosphere = function() {
                             }
 
                             _response.state = "error";
-                            _invokeCallback();
-                            ajaxRequest.abort();
-                            _activeRequest = null;
+                            _reconnect(ajaxRequest, rq, true);
                         };
                     }
 
@@ -1182,9 +1183,11 @@ jQuery.atmosphere = function() {
 
             function _reconnect(ajaxRequest, request, force) {
                 if (force || (request.suspend && ajaxRequest.status == 200 && request.transport != 'streaming' && _subscribed)) {
-                    _open('re-opening', request.transport, request);
                     if (request.reconnect) {
-                        _executeRequest();
+                        _open('re-opening', request.transport, request);
+                        request.id = setTimeout(function() {
+                            _executeRequest();
+                        }, request.reconnectInterval);
                     }
                 }
             }
@@ -1467,7 +1470,14 @@ jQuery.atmosphere = function() {
              * @private
              */
             function _pushIE(message) {
-                _pushAjaxMessage(message);
+                if (_request.enableXDR && jQuery.atmosphere.checkCORSSupport()) {
+                    var rq = _getPushRequest(message);
+                    // Do not reconnect since we are pushing.
+                    rq.reconnect = false;
+                    _jsonp(rq);
+                } else {
+                    _pushAjaxMessage(message);
+                }
             }
 
             /**
