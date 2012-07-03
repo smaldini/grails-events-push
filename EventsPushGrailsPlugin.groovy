@@ -78,6 +78,7 @@ the server to the browser.
                 'description'('MeteorServlet')
                 'servlet-name'('MeteorServlet')
                 'servlet-class'(GrailsMeteorServlet.name)
+                'async-supported'(true)
                 if (!config?.servlet?.initParams?.'org.atmosphere.useWebSocket') {
                     'init-param' {
                         'param-name'('org.atmosphere.useWebSocket')
