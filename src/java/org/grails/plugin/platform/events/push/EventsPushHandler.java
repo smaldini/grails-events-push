@@ -115,7 +115,7 @@ public class EventsPushHandler extends HttpServlet {
 
             if (topic != null && ((Boolean) broadcastClient) &&
                     !doneTopics.contains(topic)) {
-                eventsRegistry.addListener(eventDefinition.getScope(), topic, new BroadcastEventWrapper(topic), m, eventDefinition);
+                eventsRegistry.on(eventDefinition.getNamespace(), topic, new BroadcastEventWrapper(topic), m, eventDefinition);
                 doneTopics.add(topic);
             }
         }
@@ -196,7 +196,7 @@ public class EventsPushHandler extends HttpServlet {
             return;
         }
         final JSONElement body = element.has("body") ? (JSONElement) element.get("body") : null;
-        grailsEvents._eventAsync(PUSH_SCOPE, topic, body != null ? body : element);
+        grailsEvents.eventAsync(PUSH_SCOPE, topic, body != null ? body : element);
     }
 
     private String extractTopic(String pathInfo) {

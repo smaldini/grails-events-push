@@ -19,7 +19,7 @@ import org.groovy.grails.platform.push.TestDomain
 
 events = {
     "sampleBro" browser: true, //Will allow client to register for events push
-            scope: "*" //Will allow both server and client to send events on this topic due to scope:'*'
+            namespace: "*" //Will allow both server and client to send events on this topic due to scope:'*'
 
     /*
     Will allow client to register for events push, every GORM afterInsert events will be
