@@ -32,8 +32,8 @@ import grails.events.Listener
 class TestService {
 
 	//Listen for sampleBro events, the TestEvents.groovy DSL will configure this topic to observe clients by using scope : 'browser'
-	@Listener('sampleBro')
-	def testEvent(test) {
+	@Listener
+	def sampleBro(test) {
 
 		println """--> $test"""
 		def ts=new TestDomain(name:'test')
