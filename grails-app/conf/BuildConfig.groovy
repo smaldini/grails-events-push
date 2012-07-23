@@ -26,7 +26,7 @@ grails.project.dependency.resolution = {
         mavenRepo "https://oss.sonatype.org/content/repositories/releases"
     }
     dependencies {
-        compile('org.atmosphere:atmosphere-runtime:1.0.0.beta1') {
+        compile('org.atmosphere:atmosphere-runtime:1.0.0.beta4') {
             excludes 'slf4j-api', 'atmosphere-ping'
         }
     }

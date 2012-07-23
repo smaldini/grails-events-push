@@ -16,8 +16,13 @@
  * limitations under the License.
  */
 
+
+
+import org.atmosphere.cpr.ApplicationConfig
+import org.atmosphere.cpr.MeteorServlet
 import org.grails.plugin.platform.events.push.EventsPushHandler
 import org.grails.plugin.platform.events.push.GrailsMeteorServlet
+import org.springframework.util.ClassUtils
 
 class EventsPushGrailsPlugin {
     // the plugin version
@@ -77,13 +82,19 @@ the server to the browser.
             'servlet' {
                 'description'('MeteorServlet')
                 'servlet-name'('MeteorServlet')
-                'servlet-class'(GrailsMeteorServlet.name)
-                'async-supported'(true)
-                if (!config?.servlet?.initParams?.'org.atmosphere.useWebSocket') {
+                'servlet-class'(MeteorServlet.name)
+                'init-param' {
+                    'param-name'(ApplicationConfig.SERVLET_CLASS)
+                    'param-value'(EventsPushHandler.name)
+                }
+                if (!config?.servlet?.initParams?."$ApplicationConfig.WEBSOCKET_SUPPORT") {
                     'init-param' {
-                        'param-name'('org.atmosphere.useWebSocket')
+                        'param-name'(ApplicationConfig.WEBSOCKET_SUPPORT)
                         'param-value'(true)
                     }
+                }
+                if (ClassUtils.isPresent("javax.servlet.AsyncContext", Thread.currentThread().getContextClassLoader())) {
+                    'async-supported'(true)
                 }
                 config?.servlet?.initParams.each { initParam ->
                     'init-param' {
