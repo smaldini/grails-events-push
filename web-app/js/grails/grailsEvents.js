@@ -61,22 +61,34 @@ var grails = grails || {};
                     handlers = [handler];
                     handlerMap[topic] = handlers;
 
+                    var topics = "";
+                    for (var _topic in handlerMap) {
+                        topics += _topic + ',';
+                    }
+                    if (topics[topics.length - 1] == ',') {
+                        topics = topics.substr(0, topics.length - 1);
+                    }
+
                     if (request) {
-                        var topics = "";
-                        for (var _topic in handlerMap) {
-                            topics += _topic + ',';
-                        }
-                        if (topics[topics.length - 1] == ',') {
-                            topics = topics.substr(0, topics.length - 1);
-                        }
+//                        request.shared = true;
+                        request.messageDelimiter = '|||||';
                         request.headers = {'topics':topics};
                         request.url = that.root + '/' + that.path + '/' + that.globalTopicName;
                         request.transport = request.transport ? request.transport : that.transport;
 
                         return socket.subscribe(request);
                     } else {
-                        socket.unsubscribeUrl(that.root + '/' + that.path + '/' + that.globalTopicName);
-                        init();
+                        var oldOnOpen = that.onopen;
+                        var reinit = function(){
+                            socket.unsubscribe();
+                            that.onopen = oldOnOpen;
+                            init();
+                        };
+                        if(state != grails.Events.OPEN){
+                            that.onopen = reinit;
+                        }else{
+                            reinit();
+                        }
                     }
                 } else {
                     handlers[handlers.length] = handler;
@@ -109,7 +121,6 @@ var grails = grails || {};
             that.readyState = function () {
                 return state;
             };
-
 
             function init() {
                 var request = {};
@@ -147,8 +158,10 @@ var grails = grails || {};
                             }
                         }
                     } else if (response.status == 504) {
-                        socket.unsubscribeUrl(that.root + '/' + that.path + '/' + that.globalTopicName);
-                        init();
+//                        that.globalTopicSocket.onClose = function(){
+                            init();
+//                        };
+                        //that.globalTopicSocket.close();
                     }
                 };
 

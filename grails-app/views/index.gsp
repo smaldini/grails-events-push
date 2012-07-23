@@ -19,7 +19,6 @@
          Adding a listener requires a topic to listen and a function handler to react, data should be a JSON object
          */
         grailsEvents.on($('#topic').val(), function (data) {
-        alert('test')
           $("#messages").append("<div>" + data.message + "</div>")
         });
         grailsEvents.on("afterInsert", function (data) {

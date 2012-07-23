@@ -25,5 +25,5 @@ events = {
     Will allow client to register for events push, every GORM afterInsert events will be
     propagated
     */
-    "afterInsert" browser: true, filter:TestDomain
+    "afterInsert" browser: true, filter:TestDomain, namespace: 'gorm'
 }
