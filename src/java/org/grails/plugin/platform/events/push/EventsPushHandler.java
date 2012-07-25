@@ -21,10 +21,7 @@ import grails.converters.JSON;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -44,6 +41,7 @@ import org.codehaus.groovy.grails.web.json.JSONElement;
 import org.codehaus.groovy.grails.web.json.JSONObject;
 import org.grails.plugin.platform.events.EventDefinition;
 import org.grails.plugin.platform.events.EventsImpl;
+import org.grails.plugin.platform.events.ListenerId;
 import org.grails.plugin.platform.events.registry.EventsRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +72,10 @@ public class EventsPushHandler extends HttpServlet {
     public static final String PUSH_SCOPE = "browser";
     public static final String CLIENT_BROADCAST_PARAM = "browser";
 
+    public HashMap<String, String> broadcastersWhiteList = new HashMap<String, String>();
+
+    private static final Method broadcastEventMethod = ReflectionUtils.findMethod(BroadcastEventWrapper.class, "broadcastEvent", Object.class);
+
     @Override
     public void init() throws ServletException {
         super.init();
@@ -99,26 +101,27 @@ public class EventsPushHandler extends HttpServlet {
         }
 
         if (grailsEvents != null && eventsRegistry != null) {
-            registerTopics(eventsRegistry, grailsEvents);
+            broadcastersWhiteList.putAll(registerTopics(eventsRegistry, grailsEvents));
         }
     }
 
-    static public void registerTopics(EventsRegistry eventsRegistry, EventsImpl grailsEvents) {
-        Method m = ReflectionUtils.findMethod(BroadcastEventWrapper.class, "broadcastEvent", Object.class);
-        List<String> doneTopics = new ArrayList<String>();
+    static public Map<String, String> registerTopics(EventsRegistry eventsRegistry, EventsImpl grailsEvents) {
+        Map<String, String> doneTopics = new HashMap<String, String>();
         Object broadcastClient = null;
 
         for (EventDefinition eventDefinition : grailsEvents.getEventDefinitions()) {
-            String topic = eventDefinition.getListenerId().getTopic();
+            String topic = eventDefinition.getTopic();
             broadcastClient = eventDefinition.getOthersAttributes() != null ? eventDefinition.getOthersAttributes().get(CLIENT_BROADCAST_PARAM) : false;
             broadcastClient = broadcastClient != null ? broadcastClient : false;
 
             if (topic != null && ((Boolean) broadcastClient) &&
-                    !doneTopics.contains(topic)) {
-                eventsRegistry.on(eventDefinition.getNamespace(), topic, new BroadcastEventWrapper(topic), m, eventDefinition);
-                doneTopics.add(topic);
+                    !doneTopics.containsKey(topic)) {
+                eventsRegistry.on(eventDefinition.getNamespace(), topic, new BroadcastEventWrapper(topic), broadcastEventMethod);
+
+                doneTopics.put(topic, eventDefinition.getNamespace());
             }
         }
+        return doneTopics;
     }
 
     private static class BroadcastEventWrapper {
@@ -168,7 +171,14 @@ public class EventsPushHandler extends HttpServlet {
             b = broadcasterFactory.lookup(topic);
             if (b != null) {
                 b.addAtmosphereResource(m.getAtmosphereResource());
-            }
+            }/* else {
+                Map.Entry<String,String> whitelistedTopid = matchesWhitelist(topic);
+                if (whitelistedTopid != null) {
+                    broadcasterFactory.lookup(whitelistedTopid.getKey()).addAtmosphereResource(m.getAtmosphereResource());
+                    eventsRegistry.on(CLIENT_BROADCAST_PARAM, topic, new BroadcastEventWrapper(topic), broadcastEventMethod);
+                    broadcasterFactory.lookup(topic).addAtmosphereResource(m.getAtmosphereResource());
+                }
+            }*/
         }
 
         // Log all events on the console, including WebSocket events.
@@ -186,6 +196,15 @@ public class EventsPushHandler extends HttpServlet {
             /*res.getOutputStream().write((buildResponse).getBytes());
             res.getOutputStream().flush();*/
         }
+    }
+
+    private Map.Entry<String,String> matchesWhitelist(String topic) {
+        for (Map.Entry<String,String> whitelistedTopic : broadcastersWhiteList.entrySet()) {
+            if (ListenerId.matchesTopic(whitelistedTopic.getKey(), topic, false))
+                return whitelistedTopic;
+        }
+
+        return null;
     }
 
     public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {

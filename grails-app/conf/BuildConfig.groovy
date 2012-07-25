@@ -6,6 +6,7 @@ grails.project.target.level = 1.5
 grails.project.source.level = 1.5
 //grails.project.war.file = "target/${appName}-${appVersion}.war"
 grails.tomcat.nio = true
+grails.plugin.location.'platformCore' = '../../platform-core'
 
 
 grails.project.dependency.resolution = {
@@ -43,6 +44,6 @@ grails.project.dependency.resolution = {
         ) {
             export = false
         }
-        compile ':platform-core:1.0.M2'
+        //compile (':platform-core:1.0.M2')
     }
 }

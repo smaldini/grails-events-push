@@ -18,12 +18,11 @@ import org.groovy.grails.platform.push.TestDomain
 */
 
 events = {
-    "sampleBro" browser: true, //Will allow client to register for events push
-            namespace: "*" //Will allow both server and client to send events on this topic due to scope:'*'
+    "sampleBro*" namespace: 'browser', browser: true //Will allow client to register for events push
 
     /*
     Will allow client to register for events push, every GORM afterInsert events will be
     propagated
     */
-    "afterInsert" browser: true, filter:TestDomain, namespace: 'gorm'
+    "afterInsert" namespace: 'gorm', browser: true, filter:TestDomain
 }
