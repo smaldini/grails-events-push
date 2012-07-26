@@ -33,7 +33,7 @@ class TestService {
 
 	//Listen for sampleBro events, the TestEvents.groovy DSL will configure this topic to observe clients by using scope : 'browser'
 	@Listener(namespace = 'browser')
-	def sampleBro1(test) {
+	def sampleBro(test) {
 
 		println """--> $test"""
 		def ts=new TestDomain(name:'test')

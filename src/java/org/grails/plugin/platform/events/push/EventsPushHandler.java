@@ -29,17 +29,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.atmosphere.cache.HeaderBroadcasterCache;
-import org.atmosphere.cpr.ApplicationConfig;
-import org.atmosphere.cpr.Broadcaster;
-import org.atmosphere.cpr.BroadcasterFactory;
-import org.atmosphere.cpr.HeaderConfig;
-import org.atmosphere.cpr.Meteor;
+import org.atmosphere.cpr.*;
 import org.atmosphere.websocket.WebSocketEventListenerAdapter;
 import org.codehaus.groovy.grails.commons.ApplicationAttributes;
 import org.codehaus.groovy.grails.commons.GrailsApplication;
 import org.codehaus.groovy.grails.web.json.JSONElement;
 import org.codehaus.groovy.grails.web.json.JSONObject;
 import org.grails.plugin.platform.events.EventDefinition;
+import org.grails.plugin.platform.events.EventMessage;
 import org.grails.plugin.platform.events.EventsImpl;
 import org.grails.plugin.platform.events.ListenerId;
 import org.grails.plugin.platform.events.registry.EventsRegistry;
@@ -74,7 +71,7 @@ public class EventsPushHandler extends HttpServlet {
 
     public HashMap<String, String> broadcastersWhiteList = new HashMap<String, String>();
 
-    private static final Method broadcastEventMethod = ReflectionUtils.findMethod(BroadcastEventWrapper.class, "broadcastEvent", Object.class);
+    private static final Method broadcastEventMethod = ReflectionUtils.findMethod(BroadcastEventWrapper.class, "broadcastEvent", EventMessage.class);
 
     @Override
     public void init() throws ServletException {
@@ -125,20 +122,26 @@ public class EventsPushHandler extends HttpServlet {
     }
 
     private static class BroadcastEventWrapper {
+        private boolean wildcard;
         private Broadcaster b;
 
         public BroadcastEventWrapper(String topic) {
+            this.wildcard = topic.contains("*");
             this.b = BroadcasterFactory.getDefault().lookup(topic, true);
             this.b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
         }
 
-        public void broadcastEvent(Object message) {
-            if (message != null) {
-                Map<String, Object> jsonResponse = new HashMap<String, Object>();
-                jsonResponse.put("topic", b.getID());
-                jsonResponse.put("body", message);
-                b.broadcast(new JSON(jsonResponse).toString());
+        public void broadcastEvent(EventMessage message) {
+            Map<String, Object> jsonResponse = new HashMap<String, Object>();
+            jsonResponse.put("topic", message.getEvent());
+            jsonResponse.put("body", message.getData());
+            String json = new JSON(jsonResponse).toString();
+            if(wildcard){
+                BroadcasterFactory.getDefault().lookup(message.getEvent()).broadcast(json);
+            }else{
+                b.broadcast(json);
             }
+
         }
     }
 
@@ -171,14 +174,12 @@ public class EventsPushHandler extends HttpServlet {
             b = broadcasterFactory.lookup(topic);
             if (b != null) {
                 b.addAtmosphereResource(m.getAtmosphereResource());
-            }/* else {
-                Map.Entry<String,String> whitelistedTopid = matchesWhitelist(topic);
+            } else {
+                Map.Entry<String, String> whitelistedTopid = matchesWhitelist(topic);
                 if (whitelistedTopid != null) {
-                    broadcasterFactory.lookup(whitelistedTopid.getKey()).addAtmosphereResource(m.getAtmosphereResource());
-                    eventsRegistry.on(CLIENT_BROADCAST_PARAM, topic, new BroadcastEventWrapper(topic), broadcastEventMethod);
-                    broadcasterFactory.lookup(topic).addAtmosphereResource(m.getAtmosphereResource());
+                    broadcasterFactory.lookup(topic, true).addAtmosphereResource(m.getAtmosphereResource());
                 }
-            }*/
+            }
         }
 
         // Log all events on the console, including WebSocket events.
@@ -198,8 +199,8 @@ public class EventsPushHandler extends HttpServlet {
         }
     }
 
-    private Map.Entry<String,String> matchesWhitelist(String topic) {
-        for (Map.Entry<String,String> whitelistedTopic : broadcastersWhiteList.entrySet()) {
+    private Map.Entry<String, String> matchesWhitelist(String topic) {
+        for (Map.Entry<String, String> whitelistedTopic : broadcastersWhiteList.entrySet()) {
             if (ListenerId.matchesTopic(whitelistedTopic.getKey(), topic, false))
                 return whitelistedTopic;
         }

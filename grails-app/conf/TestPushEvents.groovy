@@ -18,7 +18,7 @@ import org.groovy.grails.platform.push.TestDomain
 */
 
 events = {
-    "sampleBro*" namespace: 'browser', browser: true //Will allow client to register for events push
+    "sampleBro-*" namespace: 'browser', browser: true //Will allow client to register for events push
 
     /*
     Will allow client to register for events push, every GORM afterInsert events will be
