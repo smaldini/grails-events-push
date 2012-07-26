@@ -10,6 +10,9 @@
        a path to event-bus servlet and options. There are sensible defaults for each argument
        */
       var grailsEvents = new grails.Events("${createLink(uri:'')}");
+      grailsEvents.on("afterInsert", function (data) {
+          $("#messages").append("<div>" + $.stringifyJSON(data) + "</div>");
+        });
 
       /*
        Add a listener for the topic from first input + a listener on afterInsert topic.
@@ -20,9 +23,6 @@
          */
         grailsEvents.on($('#topic').val(), function (data) {
           $("#messages").append("<div>" + data.message + "</div>")
-        });
-        grailsEvents.on("afterInsert", function (data) {
-          $("#messages").append("<div>" + $.stringifyJSON(data) + "</div>");
         });
       }
 
