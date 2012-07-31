@@ -11,8 +11,7 @@ Events-push is a white-list broadcaster (client-side events scope is 'browser').
 MyEvents.groovy >
 
 ```groovy
-events = {
-    'saveTodo' scope:'*' // allows both server (scope:'app' or 'pluginName') and client (scope:'browser') to send data over this topic
+events = {    
     'savedTodo' browser:true // allows browser push on this topic
 }
 ```
@@ -21,7 +20,7 @@ events = {
 MyService.groovy >
 ```groovy
 //will receive client events from 'saveTodo' topic
-@Listener saveTodo(Map data){
+@Listener(namespace='browser') saveTodo(Map data){
   //...
   event('savedTodo', data) // will trigger registered browsers on 'savedTodo' topic
 }
