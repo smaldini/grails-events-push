@@ -37,4 +37,4 @@ someView.gsp >
 ```
 
 You can find a full sample using [Events-si](https://github.com/smaldini/grails-events-si), RabbitMQ, BackboneJS, coffeescript and CloudFoundry in
-[Grails Todo reposiotry](https://github.com/smaldini/grailsTodos).
+[Grails Todo repository](https://github.com/smaldini/grailsTodos).
