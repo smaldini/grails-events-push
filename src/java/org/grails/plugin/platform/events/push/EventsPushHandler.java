@@ -22,6 +22,7 @@ import grails.converters.JSON;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -67,6 +68,7 @@ public class EventsPushHandler extends HttpServlet {
     public static final String PUSH_SCOPE = "browser";
     public static final String CLIENT_BROADCAST_PARAM = "browser";
     public static final String CLIENT_FILTER_PARAM = "browserFilter";
+    public static final String DELIMITER = "|||||";
 
     public HashMap<String, EventDefinition> broadcastersWhiteList = new HashMap<String, EventDefinition>();
 
@@ -95,14 +97,59 @@ public class EventsPushHandler extends HttpServlet {
         }
 
         if (grailsEvents != null && eventsRegistry != null) {
+            Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC, true);
+            b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
+            b.getBroadcasterConfig().addFilter(new PerRequestBroadcastFilter() {
+                public BroadcastAction filter(AtmosphereResource atmosphereResource, Object originalMessage, Object message) {
+                    BroadcastSignal signal;
+
+                    Boolean pass = false;
+
+                    if (BroadcastSignal.class.isAssignableFrom(message.getClass())) {
+                        signal = (BroadcastSignal) message;
+
+                        if (atmosphereResource.getRequest().getHeader(TOPICS_HEADER) != null) {
+                            String[] topics = atmosphereResource.getRequest().getHeader(TOPICS_HEADER).split(",");
+                            for (String topic : topics) {
+                                if (topic.equals(signal.eventMessage.getEvent())) {
+                                    pass = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (signal.broadcastClientFilter != null) {
+                            pass = (Boolean) signal.broadcastClientFilter.call(
+                                    new Object[]{signal.eventMessageType ? signal.eventMessage : signal.eventMessage.getData(),
+                                            atmosphereResource.getRequest()}
+                            );
+                        }
+
+                        if (pass) {
+                            return new BroadcastAction(jsonify(signal.eventMessage));
+                        } else {
+                            return new BroadcastAction(BroadcastAction.ACTION.ABORT, null);
+                        }
+                    }
+
+                    return new BroadcastAction(message);
+                }
+
+                public BroadcastAction filter(Object originalMessage, Object message) {
+                    return new BroadcastAction(message);
+                }
+            });
             broadcastersWhiteList.putAll(registerTopics(eventsRegistry, grailsEvents));
+            b.scheduleFixedBroadcast("{}" + DELIMITER, 10, TimeUnit.SECONDS);
         }
+
     }
 
     static public Map<String, EventDefinition> registerTopics(EventsRegistry eventsRegistry, Events grailsEvents) {
         Map<String, EventDefinition> doneTopics = new HashMap<String, EventDefinition>();
         Object broadcastClient;
         Closure broadcastClientFilter;
+        Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC);
 
         for (EventDefinition eventDefinition : grailsEvents.getEventDefinitions()) {
             String topic = eventDefinition.getTopic();
@@ -118,7 +165,7 @@ public class EventsPushHandler extends HttpServlet {
 
             if (topic != null && ((Boolean) broadcastClient) &&
                     !doneTopics.containsKey(topic)) {
-                eventsRegistry.on(eventDefinition.getNamespace(), topic, new BroadcastEventWrapper(topic, broadcastClientFilter), broadcastEventMethod);
+                eventsRegistry.on(eventDefinition.getNamespace(), topic, new BroadcastEventWrapper(b, broadcastClientFilter), broadcastEventMethod);
 
                 doneTopics.put(topic, eventDefinition);
             }
@@ -126,65 +173,18 @@ public class EventsPushHandler extends HttpServlet {
         return doneTopics;
     }
 
-    private static class BroadcastEventWrapper {
-        private boolean wildcard;
-        private Closure broadcastClientFilter;
-        private boolean eventMessageType = false;
-        private Broadcaster b;
-
-        public BroadcastEventWrapper(final String topic, final Closure broadcastClientFilter) {
-            this.wildcard = topic.contains("*");
-            this.broadcastClientFilter = broadcastClientFilter;
-            this.b = BroadcasterFactory.getDefault().lookup(topic, true);
-            this.b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
-
-            if (broadcastClientFilter != null) {
-                eventMessageType = EventMessage.class.isAssignableFrom(broadcastClientFilter.getParameterTypes()[0]);
-                this.b.getBroadcasterConfig().addFilter(new PerRequestBroadcastFilter() {
-                    public BroadcastAction filter(AtmosphereResource atmosphereResource, Object originalMessage, Object message) {
-                        Boolean pass = (Boolean)broadcastClientFilter.call(
-                                new Object[]{eventMessageType ? message : ((EventMessage)message).getData(),
-                                atmosphereResource.getRequest() }
-                        );
-                        if(pass)
-                            return new BroadcastAction(jsonify((EventMessage)message));
-                        else
-                            return new BroadcastAction(BroadcastAction.ACTION.ABORT, null);
-                    }
-
-                    public BroadcastAction filter(Object originalMessage, Object message) {
-                        return new BroadcastAction(message);
-                    }
-                });
-            }
-        }
-
-        private String jsonify(EventMessage message) {
-            Map<String, Object> jsonResponse = new HashMap<String, Object>();
-            jsonResponse.put("topic", message.getEvent());
-            jsonResponse.put("body", message.getData());
-            return new JSON(jsonResponse).toString();
-        }
-
-        public void broadcastEvent(EventMessage message) {
-            Object m = message;
-            if (broadcastClientFilter == null)
-                m = jsonify(message);
-
-            if (wildcard)
-                BroadcasterFactory.getDefault().lookup(message.getEvent()).broadcast(m);
-            else
-                b.broadcast(m);
-
-        }
+    private String jsonify(EventMessage message) {
+        Map<String, Object> jsonResponse = new HashMap<String, Object>();
+        jsonResponse.put("topic", message.getEvent());
+        jsonResponse.put("body", message.getData());
+        return new JSON(jsonResponse).toString() + DELIMITER;
     }
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        //res.setContentType("text/html;charset=ISO-8859-1");
+        res.setContentType("application/javascript; charset=UTF-8");
 
-
-        Broadcaster defaultBroadcaster = broadcasterFactory.lookup(extractTopic(req.getPathInfo()));
+        Broadcaster defaultBroadcaster = broadcasterFactory.lookup(GLOBAL_TOPIC);
         if (defaultBroadcaster == null) {
             res.sendError(403);
             return;
@@ -195,17 +195,17 @@ public class EventsPushHandler extends HttpServlet {
         if (_topics == null)
             return;
 
-        String[] topics = _topics.split(",");
+//        String[] topics = _topics.split(",");
 
         // Create a Meteor
         Meteor m = Meteor.build(req);
 
-        for (String topic : topics) {
-            if (topic.equals(GLOBAL_TOPIC))
-                continue;
-
-            lookupTopic(topic, m);
-        }
+//        for (String topic : topics) {
+//            if (topic.equals(GLOBAL_TOPIC))
+//                continue;
+//
+//            lookupTopic(topic, m);
+//        }
 
         // Log all events on the console, including WebSocket events.
         if (log.isDebugEnabled()) {
@@ -219,23 +219,22 @@ public class EventsPushHandler extends HttpServlet {
 
         if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
             req.setAttribute(ApplicationConfig.RESUME_ON_BROADCAST, Boolean.TRUE);
-            m.suspend(-1, false);
-        } else {
-            m.suspend(-1);
         }
+        m.suspend(-1, false);
+
     }
 
-    private void lookupTopic(String topic, Meteor m) {
-        Broadcaster b = broadcasterFactory.lookup(topic);
-        if (b != null) {
-            b.addAtmosphereResource(m.getAtmosphereResource());
-        } else {
-            Map.Entry<String, EventDefinition> whitelistedTopid = matchesWhitelist(topic);
-            if (whitelistedTopid != null) {
-                broadcasterFactory.lookup(topic, true).addAtmosphereResource(m.getAtmosphereResource());
-            }
-        }
-    }
+//    private void lookupTopic(String topic, Meteor m) {
+//        Broadcaster b = broadcasterFactory.lookup(topic);
+//        if (b != null) {
+//            b.addAtmosphereResource(m.getAtmosphereResource());
+//        } else {
+//            Map.Entry<String, EventDefinition> whitelistedTopid = matchesWhitelist(topic);
+//            if (whitelistedTopid != null) {
+//                broadcasterFactory.lookup(topic, true).addAtmosphereResource(m.getAtmosphereResource());
+//            }
+//        }
+//    }
 
     private Map.Entry<String, EventDefinition> matchesWhitelist(String topic) {
         for (Map.Entry<String, EventDefinition> whitelistedTopic : broadcastersWhiteList.entrySet()) {
@@ -247,9 +246,9 @@ public class EventsPushHandler extends HttpServlet {
     }
 
     public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        String topic = extractTopic(req.getPathInfo());
         JSONObject element = (JSONObject) JSON.parse(req);
-        topic = element.has("topic") ? element.get("topic").toString() : topic;
+
+        String topic = element.has("topic") ? element.get("topic").toString() : null;
         if (topic == null) {
             return;
         }
@@ -257,9 +256,9 @@ public class EventsPushHandler extends HttpServlet {
         grailsEvents.event(PUSH_SCOPE, topic, body != null ? body : element);
     }
 
-    private String extractTopic(String pathInfo) {
-        String[] decodedPath = pathInfo.split("/");
-        return decodedPath[decodedPath.length - 1];
-    }
+//    private String extractTopic(String pathInfo) {
+//        String[] decodedPath = pathInfo.split("/");
+//        return decodedPath[decodedPath.length - 1];
+//    }
 
 }

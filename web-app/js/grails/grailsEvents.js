@@ -146,7 +146,13 @@ var grails = grails || {};
                     if (response.status == 200) {
                         var data;
                         if (response.responseBody.length > 0) {
-                            data = jQuery.parseJSON(response.responseBody);
+                            try{
+                                data = jQuery.parseJSON(response.responseBody);
+                            }catch(e){
+                                if(console != 'undefined'){
+                                    console.log('discarded message',e);
+                                }
+                            }
                             var handlers = handlerMap[data.topic ? data.topic : that.globalTopicName];
                             if (handlers) {
                                 // We make a copy since the handler might get unregistered from within the
@@ -157,11 +163,6 @@ var grails = grails || {};
                                 }
                             }
                         }
-                    } else if (response.status == 504) {
-//                        that.globalTopicSocket.onClose = function(){
-                            init();
-//                        };
-                        //that.globalTopicSocket.close();
                     }
                 };
 
