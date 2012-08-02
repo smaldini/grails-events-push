@@ -36,10 +36,7 @@ import org.codehaus.groovy.grails.commons.ApplicationAttributes;
 import org.codehaus.groovy.grails.commons.GrailsApplication;
 import org.codehaus.groovy.grails.web.json.JSONElement;
 import org.codehaus.groovy.grails.web.json.JSONObject;
-import org.grails.plugin.platform.events.EventDefinition;
-import org.grails.plugin.platform.events.EventMessage;
-import org.grails.plugin.platform.events.EventsImpl;
-import org.grails.plugin.platform.events.ListenerId;
+import org.grails.plugin.platform.events.*;
 import org.grails.plugin.platform.events.registry.EventsRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,11 +56,12 @@ public class EventsPushHandler extends HttpServlet {
 
     static private Logger log = LoggerFactory.getLogger(EventsPushHandler.class);
 
-    private EventsImpl grailsEvents;
+    private Events grailsEvents;
     private EventsRegistry eventsRegistry;
     private BroadcasterFactory broadcasterFactory;
 
     public static final String ID_GRAILSEVENTS = "grailsEvents";
+    public static final String ID_GRAILSEVENTSREGISTRY = "grailsEventsRegistry";
     public static final String TOPICS_HEADER = "topics";
     public static final String GLOBAL_TOPIC = "eventsbus";
     public static final String PUSH_SCOPE = "browser";
@@ -90,7 +88,7 @@ public class EventsPushHandler extends HttpServlet {
         if (applicationContext != null) {
             try {
                 grailsEvents = applicationContext.getBean(ID_GRAILSEVENTS, EventsImpl.class);
-                eventsRegistry = grailsEvents.getGrailsEventsRegistry();
+                eventsRegistry = applicationContext.getBean(ID_GRAILSEVENTSREGISTRY, EventsRegistry.class);
             } catch (Exception c) {
                 log.error("Couldn't manage to retrieve beans", c);
             }
@@ -101,7 +99,7 @@ public class EventsPushHandler extends HttpServlet {
         }
     }
 
-    static public Map<String, EventDefinition> registerTopics(EventsRegistry eventsRegistry, EventsImpl grailsEvents) {
+    static public Map<String, EventDefinition> registerTopics(EventsRegistry eventsRegistry, Events grailsEvents) {
         Map<String, EventDefinition> doneTopics = new HashMap<String, EventDefinition>();
         Object broadcastClient;
         Closure broadcastClientFilter;
@@ -256,7 +254,7 @@ public class EventsPushHandler extends HttpServlet {
             return;
         }
         final JSONElement body = element.has("body") ? (JSONElement) element.get("body") : null;
-        grailsEvents.eventAsync(PUSH_SCOPE, topic, body != null ? body : element);
+        grailsEvents.event(PUSH_SCOPE, topic, body != null ? body : element);
     }
 
     private String extractTopic(String pathInfo) {

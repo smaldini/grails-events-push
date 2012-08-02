@@ -17,9 +17,9 @@ grails.project.dependency.resolution = {
 
     log "warn" // log level of Ivy resolver, either 'error', 'warn', 'info', 'debug' or 'verbose'
     repositories {
+        mavenLocal()
         grailsCentral()
         mavenCentral()
-        mavenLocal()
         //mavenRepo "http://snapshots.repository.codehaus.org"
         //mavenRepo "http://repository.codehaus.org"
         //mavenRepo "http://download.java.net/maven/2/"
@@ -27,7 +27,7 @@ grails.project.dependency.resolution = {
         mavenRepo "https://oss.sonatype.org/content/repositories/releases"
     }
     dependencies {
-        compile('org.atmosphere:atmosphere-runtime:1.0.0.beta4') {
+        compile('org.atmosphere:atmosphere-runtime:1.0.0.beta5') {
             excludes 'slf4j-api', 'atmosphere-ping'
         }
     }
