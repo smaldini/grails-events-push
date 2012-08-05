@@ -21,17 +21,18 @@
 var grails = grails || {};
 (function () {
     if (!grails.Events) {
-        grails.Events = function (root, path, options) {
+        grails.Events = function (root, options) {
 
             var that = this;
             var socket = $.atmosphere;
 
             that.root = (root && (typeof root == "string")) ? root : (window.location.protocol + '//' + window.location.hostname + ':' + window.location.port);
-            that.path = (path && (typeof path == "string")) ? path : "g-eventsbus";
-
             var hasOptions = (options && (typeof options == "object"));
+
             that.globalTopicName = hasOptions && options.globalTopicName && (typeof options.globalTopicName == "string") ? options.globalTopicName : "eventsbus";
+            that.path = hasOptions  && options.path && (typeof options.path == "string") ? option.path : "g-eventsbus";
             that.transport = hasOptions && options.transport && (typeof options.transport == "string") ? options.transport : "websocket";
+            that.fallbackTransport = hasOptions && options.fallbackTransport && (typeof options.fallbackTransport == "string") ? options.fallbackTransport : "sse";
 
 
             var state = grails.Events.CONNECTING;
@@ -150,10 +151,11 @@ var grails = grails || {};
                                 data = jQuery.parseJSON(response.responseBody);
                             }catch(e){
                                 if(console != 'undefined'){
-                                    console.log('discarded message',e);
+                                    console.log('discarded message: '+response.responseBody);
                                 }
+                                return;
                             }
-                            var handlers = handlerMap[data.topic ? data.topic : that.globalTopicName];
+                            var handlers = handlerMap[data && data.topic ? data.topic : that.globalTopicName];
                             if (handlers) {
                                 // We make a copy since the handler might get unregistered from within the
                                 // handler itself, which would screw up our iteration

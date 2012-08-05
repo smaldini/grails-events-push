@@ -182,8 +182,6 @@ public class EventsPushHandler extends HttpServlet {
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        res.setContentType("application/javascript; charset=UTF-8");
-
         Broadcaster defaultBroadcaster = broadcasterFactory.lookup(GLOBAL_TOPIC);
         if (defaultBroadcaster == null) {
             res.sendError(403);
@@ -214,6 +212,8 @@ public class EventsPushHandler extends HttpServlet {
             else
                 m.addListener(new AtmosphereResourceEventListenerAdapter());
         }
+
+        res.setContentType("application/javascript; charset=UTF-8");
 
         m.setBroadcaster(defaultBroadcaster);
 
