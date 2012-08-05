@@ -32,7 +32,7 @@ var grails = grails || {};
             that.globalTopicName = hasOptions && options.globalTopicName && (typeof options.globalTopicName == "string") ? options.globalTopicName : "eventsbus";
             that.path = hasOptions  && options.path && (typeof options.path == "string") ? option.path : "g-eventsbus";
             that.transport = hasOptions && options.transport && (typeof options.transport == "string") ? options.transport : "websocket";
-            that.fallbackTransport = hasOptions && options.fallbackTransport && (typeof options.fallbackTransport == "string") ? options.fallbackTransport : "sse";
+            that.fallbackTransport = hasOptions && options.fallbackTransport && (typeof options.fallbackTransport == "string") ? options.fallbackTransport :  (!!window.EventSource ? "sse" : "streaming");
 
 
             var state = grails.Events.CONNECTING;
