@@ -30,10 +30,7 @@ var grails = grails || {};
             var hasOptions = (options && (typeof options == "object"));
 
             that.globalTopicName = hasOptions && options.globalTopicName && (typeof options.globalTopicName == "string") ? options.globalTopicName : "eventsbus";
-            that.path = hasOptions  && options.path && (typeof options.path == "string") ? option.path : "g-eventsbus";
-            that.transport = hasOptions && options.transport && (typeof options.transport == "string") ? options.transport : "websocket";
-            that.fallbackTransport = hasOptions && options.fallbackTransport && (typeof options.fallbackTransport == "string") ? options.fallbackTransport :  (!!window.EventSource ? "sse" : "streaming");
-
+            that.path = hasOptions && options.path && (typeof options.path == "string") ? option.path : "g-eventsbus";
 
             var state = grails.Events.CONNECTING;
             that.onopen = null;
@@ -71,23 +68,29 @@ var grails = grails || {};
                     }
 
                     if (request) {
-//                        request.shared = true;
-                        request.messageDelimiter = '|||||';
-                        request.headers = {'topics':topics};
-                        request.url = that.root + '/' + that.path + '/' + that.globalTopicName;
-                        request.transport = request.transport ? request.transport : that.transport;
+                        //request.shared = true;
+                        var rq = {
+                            messageDelimiter:'|||||',
+                            headers:{'topics':topics},
+                            url:that.root + '/' + that.path + '/' + that.globalTopicName,
+                            transport: "websocket",
+                            fallbackTransport: (!!window.EventSource ? "sse" : "streaming"),
+                            reconnectInterval:3000
+                        };
+                        rq = jQuery.extend(rq, options);
+                        rq = jQuery.extend(rq, request);
 
-                        return socket.subscribe(request);
+                        return socket.subscribe(rq);
                     } else {
                         var oldOnOpen = that.onopen;
-                        var reinit = function(){
+                        var reinit = function () {
                             socket.unsubscribe();
                             that.onopen = oldOnOpen;
                             init();
                         };
-                        if(state != grails.Events.OPEN){
+                        if (state != grails.Events.OPEN) {
                             that.onopen = reinit;
-                        }else{
+                        } else {
                             reinit();
                         }
                     }
@@ -127,6 +130,10 @@ var grails = grails || {};
                 var request = {};
 
                 var connecting = function () {
+                    if (state == grails.Events.OPEN) {
+                        this.close();
+                        return;
+                    }
                     state = grails.Events.OPEN;
                     if (that.onopen) {
                         that.onopen();
@@ -147,11 +154,11 @@ var grails = grails || {};
                     if (response.status == 200) {
                         var data;
                         if (response.responseBody.length > 0) {
-                            try{
+                            try {
                                 data = jQuery.parseJSON(response.responseBody);
-                            }catch(e){
-                                if(console != 'undefined'){
-                                    console.log('discarded message: '+response.responseBody);
+                            } catch (e) {
+                                if (console != 'undefined') {
+                                    console.log('discarded message: ' + response.responseBody);
                                 }
                                 return;
                             }
