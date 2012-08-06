@@ -76,6 +76,7 @@ var grails = grails || {};
                         url:that.root + '/' + that.path + '/' + that.globalTopicName,
                         transport:"websocket",
                         fallbackTransport:(!!window.EventSource ? "sse" : "streaming"),
+                        reconnectInterval:4000,
                         maxRequest:1,
                         localId:_localId
                     };
