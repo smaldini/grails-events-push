@@ -38,15 +38,17 @@ var grails = grails || {};
             that.onclose = null;
             var handlerMap = {};
 
+            var localId = "";
+
             that.send = function (topic, message) {
                 checkSpecified("topic", 'string', topic);
                 checkSpecified("message", 'object', message);
-                checkOpen();
+                //checkOpen();
                 var envelope = {
                     topic:topic,
                     body:message
                 };
-                that.globalTopicSocket.push({data:$.stringifyJSON(envelope)});
+                that.globalTopicSocket.push({data:jQuery.stringifyJSON(envelope)});
             };
 
             that.on = function (topic, handler, request) {
@@ -66,37 +68,30 @@ var grails = grails || {};
                     if (topics[topics.length - 1] == ',') {
                         topics = topics.substr(0, topics.length - 1);
                     }
+                    //request.shared = true;
+                    var _localId = socket.guid();
+                    var rq = {
+                        messageDelimiter:'|||||',
+                        headers:{'topics':topics},
+                        url:that.root + '/' + that.path + '/' + that.globalTopicName,
+                        transport:"websocket",
+                        fallbackTransport:(!!window.EventSource ? "sse" : "streaming"),
+                        maxRequest:1,
+                        localId:_localId
+                    };
+                    localId = _localId;
+                    rq = jQuery.extend(rq, options);
+                    rq = jQuery.extend(rq, request);
 
-                    if (request) {
-                        //request.shared = true;
-                        var rq = {
-                            messageDelimiter:'|||||',
-                            headers:{'topics':topics},
-                            url:that.root + '/' + that.path + '/' + that.globalTopicName,
-                            transport: "websocket",
-                            fallbackTransport: (!!window.EventSource ? "sse" : "streaming"),
-                            reconnectInterval:3000
-                        };
-                        rq = jQuery.extend(rq, options);
-                        rq = jQuery.extend(rq, request);
-
+                    if (!that.globalTopicSocket) {
                         return socket.subscribe(rq);
                     } else {
-                        var oldOnOpen = that.onopen;
-                        var reinit = function () {
-                            socket.unsubscribe();
-                            that.onopen = oldOnOpen;
-                            init();
-                        };
-                        if (state != grails.Events.OPEN) {
-                            that.onopen = reinit;
-                        } else {
-                            reinit();
-                        }
+                        return that.globalTopicSocket.subscribe(rq);
                     }
                 } else {
                     handlers[handlers.length] = handler;
                 }
+                return that.globalTopicSocket;
             };
 
             that.unregisterHandler = function (topic, handler) {
@@ -127,30 +122,24 @@ var grails = grails || {};
             };
 
             function init() {
-                var request = {};
-
                 var connecting = function () {
-                    if (state == grails.Events.OPEN) {
-                        this.close();
-                        return;
-                    }
                     state = grails.Events.OPEN;
                     if (that.onopen) {
                         that.onopen();
                     }
                 };
 
-                request.onOpen = connecting;
-                request.onReconnect = connecting;
+                socket.onOpen = connecting;
+                socket.onReconnect = connecting;
 
-                request.onClose = function (e) {
+                socket.onClose = function (e) {
                     state = grails.Events.CLOSED;
                     if (that.onclose) {
                         that.onclose();
                     }
                 };
 
-                request.onMessage = function (response) {
+                socket.onMessage = function (response) {
                     if (response.status == 200) {
                         var data;
                         if (response.responseBody.length > 0) {
@@ -179,7 +168,7 @@ var grails = grails || {};
                     if (that.onglobalmessage) {
                         that.onglobalmessage(data);
                     }
-                }, request);
+                });
             }
 
             function checkOpen() {

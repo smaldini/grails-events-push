@@ -37,14 +37,18 @@ class EventsPushGrailsPlugin {
             "grails-app/views/index.gsp",
             "grails-app/conf/Test*.groovy",
             "grails-app/domain/**/Test*.groovy",
-            "grails-app/services/**/Test*.groovy"
+            "grails-app/services/**/Test*.groovy",
+            "web-app/css/**",
+            "web-app/images/**",
+            "web-app/js/application.js",
+            "web-app/WEB-INF/**"
     ]
 
     def observe = ['platformCore']
 
     def title = "Events Push Plugin" // Headline display name of the plugin
     def author = "Stephane Maldini"
-    def authorEmail = "stephane.maldini@gmail.com"
+    def authorEmail = "smaldini@vmware.com"
     def description = '''\
 This is a client-side event bus based on the portable push library [Atmosphere|https://github.com/Atmosphere/atmosphere]\
 that propagates events from the server-side event bus provided by the [Platform Core|http://grails.org/plugin/platform-core]\
@@ -69,7 +73,7 @@ the server to the browser.
 //    def developers = [ [ name: "Joe Bloggs", email: "joe@bloggs.net" ]]
 
     // Location of the plugin's issue tracker.
-//    def issueManagement = [ system: "JIRA", url: "http://jira.grails.org/browse/GPMYPLUGIN" ]
+    def issueManagement = [ system: "GITHUB", url: "https://github.com/smaldini/grails-events-push/issues" ]
 
     // Online location of the plugin's browseable source code.
     def scm = [url: "https://github.com/smaldini/grails-events-push"]
