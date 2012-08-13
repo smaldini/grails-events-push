@@ -87,7 +87,9 @@ var grails = grails || {};
                     if (!that.globalTopicSocket) {
                         return socket.subscribe(rq);
                     } else {
-                        return that.globalTopicSocket.subscribe(rq);
+                        socket.unsubscribe();
+                        that.globalTopicSocket = socket.subscribe(rq);
+                        return that.globalTopicSocket;
                     }
                 } else {
                     handlers[handlers.length] = handler;
