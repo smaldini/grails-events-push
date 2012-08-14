@@ -17,8 +17,12 @@ log4j = {
         additivity = true
     }
 
-    debug 'org.atmosphere'
-    debug 'org.grails.plugin.platform'
+    environments{
+        development{
+            debug 'org.atmosphere'
+            debug 'org.grails.plugin.platform'
+        }
+    }
 
 
     error 'org.codehaus.groovy.grails.web.servlet',  //  controllers

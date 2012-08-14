@@ -986,10 +986,6 @@ jQuery.atmosphere = function() {
                 };
 
                 _websocket.onmessage = function(message) {
-                    if (message.data.indexOf("parent.callback") != -1) {
-                        jQuery.atmosphere.log(_request.logLevel, ["parent.callback no longer supported with 0.8 version and up. Please upgrade"]);
-                    }
-
                     _response.state = 'messageReceived';
                     _response.status = 200;
 
@@ -1089,11 +1085,10 @@ jQuery.atmosphere = function() {
                 if (request.trackMessageLength) {
                     // The message length is the included within the message
                     var messageStart = message.indexOf(request.messageDelimiter);
-
                     var length = response.expectedBodySize;
                     if (messageStart != -1) {
                         length = message.substring(0, messageStart);
-                        message = message.substring(messageStart + 1);
+                        message = message.substring(messageStart + request.messageDelimiter.length);
                         response.expectedBodySize = length;
                     }
 

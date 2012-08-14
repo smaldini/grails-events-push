@@ -20,6 +20,7 @@ package org.grails.plugin.platform.events.push;
 import grails.converters.JSON;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -29,8 +30,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import groovy.json.JsonSlurper;
 import groovy.lang.Closure;
+import org.apache.commons.io.IOUtils;
 import org.atmosphere.cache.HeaderBroadcasterCache;
+import org.atmosphere.client.TrackMessageSizeFilter;
 import org.atmosphere.cpr.*;
 import org.atmosphere.websocket.WebSocketEventListenerAdapter;
 import org.codehaus.groovy.grails.commons.ApplicationAttributes;
@@ -68,7 +72,7 @@ public class EventsPushHandler extends HttpServlet {
     public static final String PUSH_SCOPE = "browser";
     public static final String CLIENT_BROADCAST_PARAM = "browser";
     public static final String CLIENT_FILTER_PARAM = "browserFilter";
-    public static final String DELIMITER = "|||||";
+    public static final String DELIMITER = "<@>";
 
     public HashMap<String, EventDefinition> broadcastersWhiteList = new HashMap<String, EventDefinition>();
 
@@ -140,7 +144,7 @@ public class EventsPushHandler extends HttpServlet {
                 }
             });
             broadcastersWhiteList.putAll(registerTopics(eventsRegistry, grailsEvents));
-            b.scheduleFixedBroadcast("{}" + DELIMITER, 10, TimeUnit.SECONDS);
+            b.scheduleFixedBroadcast(2+DELIMITER+"{}", 10, TimeUnit.SECONDS);
         }
 
     }
@@ -177,7 +181,8 @@ public class EventsPushHandler extends HttpServlet {
         Map<String, Object> jsonResponse = new HashMap<String, Object>();
         jsonResponse.put("topic", message.getEvent());
         jsonResponse.put("body", message.getData());
-        return new JSON(jsonResponse).toString() + DELIMITER;
+        String res = new JSON(jsonResponse).toString();
+        return res.length() + DELIMITER + res;
     }
 
     @Override
@@ -246,13 +251,13 @@ public class EventsPushHandler extends HttpServlet {
     }
 
     public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        JSONObject element = (JSONObject) JSON.parse(req);
+        Map element = (Map)new JsonSlurper().parse(new InputStreamReader(req.getInputStream()));
 
-        String topic = element.has("topic") ? element.get("topic").toString() : null;
+        String topic = element.containsKey("topic") ? element.get("topic").toString() : null;
         if (topic == null) {
             return;
         }
-        final JSONElement body = element.has("body") ? (JSONElement) element.get("body") : null;
+        final Object body = element.containsKey("body") ? element.get("body") : null;
         grailsEvents.event(PUSH_SCOPE, topic, body != null ? body : element);
     }
 

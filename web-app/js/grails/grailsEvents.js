@@ -42,7 +42,7 @@ var grails = grails || {};
 
             that.send = function (topic, message) {
                 checkSpecified("topic", 'string', topic);
-                checkSpecified("message", 'object', message);
+                //checkSpecified("message", 'object', message);
                 //checkOpen();
                 var envelope = {
                     topic:topic,
@@ -71,15 +71,20 @@ var grails = grails || {};
                     //request.shared = true;
                     var _localId = socket.guid();
                     var rq = {
-                        messageDelimiter:'|||||',
+                        messageDelimiter:'<@>',
+                        trackMessageLength : true,
                         headers:{'topics':topics},
                         url:that.root + '/' + that.path + '/' + that.globalTopicName,
                         transport:"websocket",
-                        fallbackTransport:(!!window.EventSource ? "sse" : "streaming"),
+                        fallbackTransport: "streaming",
                         reconnectInterval:4000,
-                        maxRequest:1,
                         localId:_localId
                     };
+
+                    if(!!window.EventSource){
+                       rq.fallbackTransport = 'sse';
+                    }
+
                     localId = _localId;
                     rq = jQuery.extend(rq, options);
                     rq = jQuery.extend(rq, request);
@@ -115,7 +120,6 @@ var grails = grails || {};
             };
 
             that.close = function () {
-                checkOpen();
                 state = grails.Events.CLOSING;
                 socket.unsubscribe();
             };
