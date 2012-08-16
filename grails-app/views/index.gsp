@@ -11,7 +11,7 @@
        */
       window.grailsEvents = new grails.Events("${createLink(uri: '')}", {logLevel:"debug", transport:'sse'});
 
-      grailsEvents.on("afterInsert", function (data) {
+       grailsEvents.on("afterInsert", function (data) {
           $("#messages").append("<div>" + $.stringifyJSON(data) + "</div>");
         }, {});
 
