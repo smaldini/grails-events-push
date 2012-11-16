@@ -17,7 +17,6 @@
  */
 package org.grails.plugin.platform.events.push;
 
-import grails.converters.JSON;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -48,6 +47,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.ReflectionUtils;
 
+import static org.grails.plugin.platform.events.push.SharedConstants.*;
+
 /**
  * @author Stephane Maldini <smaldini@doc4web.com>
  * @version 1.0
@@ -60,19 +61,18 @@ import org.springframework.util.ReflectionUtils;
 public class EventsPushHandler extends HttpServlet {
 
     static private Logger log = LoggerFactory.getLogger(EventsPushHandler.class);
-
+    
+    private ApplicationContext applicationContext = null;
     private Events grailsEvents;
     private EventsRegistry eventsRegistry;
     private BroadcasterFactory broadcasterFactory;
 
     public static final String ID_GRAILSEVENTS = "grailsEvents";
     public static final String ID_GRAILSEVENTSREGISTRY = "grailsEventsRegistry";
-    public static final String TOPICS_HEADER = "topics";
     public static final String GLOBAL_TOPIC = "eventsbus";
     public static final String PUSH_SCOPE = "browser";
     public static final String CLIENT_BROADCAST_PARAM = "browser";
     public static final String CLIENT_FILTER_PARAM = "browserFilter";
-    public static final String DELIMITER = "<@>";
 
     public HashMap<String, EventDefinition> broadcastersWhiteList = new HashMap<String, EventDefinition>();
 
@@ -83,7 +83,6 @@ public class EventsPushHandler extends HttpServlet {
         super.init();
 
         broadcasterFactory = BroadcasterFactory.getDefault();
-        ApplicationContext applicationContext = null;
         try {
             applicationContext =
                     ((ApplicationContext) getServletContext().getAttribute(ApplicationAttributes.APPLICATION_CONTEXT));
@@ -103,46 +102,7 @@ public class EventsPushHandler extends HttpServlet {
         if (grailsEvents != null && eventsRegistry != null) {
             Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC, true);
             b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
-            b.getBroadcasterConfig().addFilter(new PerRequestBroadcastFilter() {
-                public BroadcastAction filter(AtmosphereResource atmosphereResource, Object originalMessage, Object message) {
-                    BroadcastSignal signal;
-
-                    Boolean pass = false;
-
-                    if (BroadcastSignal.class.isAssignableFrom(message.getClass())) {
-                        signal = (BroadcastSignal) message;
-
-                        if (atmosphereResource.getRequest().getHeader(TOPICS_HEADER) != null) {
-                            String[] topics = atmosphereResource.getRequest().getHeader(TOPICS_HEADER).split(",");
-                            for (String topic : topics) {
-                                if (topic.equals(signal.eventMessage.getEvent())) {
-                                    pass = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (signal.broadcastClientFilter != null) {
-                            pass = (Boolean) signal.broadcastClientFilter.call(
-                                    new Object[]{signal.eventMessageType ? signal.eventMessage : signal.eventMessage.getData(),
-                                            atmosphereResource.getRequest()}
-                            );
-                        }
-
-                        if (pass) {
-                            return new BroadcastAction(jsonify(signal.eventMessage));
-                        } else {
-                            return new BroadcastAction(BroadcastAction.ACTION.ABORT, null);
-                        }
-                    }
-
-                    return new BroadcastAction(message);
-                }
-
-                public BroadcastAction filter(Object originalMessage, Object message) {
-                    return new BroadcastAction(message);
-                }
-            });
+            b.getBroadcasterConfig().addFilter(new PushPerRequestBroadcastFilter(applicationContext, grailsEvents, eventsRegistry));                           
             broadcastersWhiteList.putAll(registerTopics(eventsRegistry, grailsEvents));
             b.scheduleFixedBroadcast(2+DELIMITER+"{}", 10, TimeUnit.SECONDS);
         }
@@ -175,14 +135,6 @@ public class EventsPushHandler extends HttpServlet {
             }
         }
         return doneTopics;
-    }
-
-    private String jsonify(EventMessage message) {
-        Map<String, Object> jsonResponse = new HashMap<String, Object>();
-        jsonResponse.put("topic", message.getEvent());
-        jsonResponse.put("body", message.getData());
-        String res = new JSON(jsonResponse).toString();
-        return res.length() + DELIMITER + res;
     }
 
     @Override
