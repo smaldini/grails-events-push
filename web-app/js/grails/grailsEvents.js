@@ -86,8 +86,10 @@ var grails = grails || {};
                     }
 
                     localId = _localId;
-                    rq = jQuery.extend(rq, options);
-                    rq = jQuery.extend(rq, request);
+
+                    // Allow the user to extend/override the request
+                    rq = jQuery.extend(true, rq, options);
+                    rq = jQuery.extend(true, rq, request);
 
                     if (!that.globalTopicSocket) {
                         return socket.subscribe(rq);
