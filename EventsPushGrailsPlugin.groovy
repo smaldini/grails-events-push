@@ -86,17 +86,7 @@ the server to the browser.
             'servlet' {
                 'description'('MeteorServlet')
                 'servlet-name'('MeteorServlet')
-                'servlet-class'(MeteorServlet.name)
-                'init-param' {
-                    'param-name'(ApplicationConfig.SERVLET_CLASS)
-                    'param-value'(EventsPushHandler.name)
-                }
-                if (!config?.servlet?.initParams?."$ApplicationConfig.WEBSOCKET_SUPPORT") {
-                    'init-param' {
-                        'param-name'(ApplicationConfig.WEBSOCKET_SUPPORT)
-                        'param-value'(true)
-                    }
-                }
+                'servlet-class'(GrailsMeteorServlet.name)
                 if (ClassUtils.isPresent("javax.servlet.AsyncContext", Thread.currentThread().getContextClassLoader())) {
                     'async-supported'(true)
                 }

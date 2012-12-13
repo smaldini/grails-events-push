@@ -35,6 +35,7 @@ import groovy.lang.Closure;
 import org.apache.commons.io.IOUtils;
 import org.atmosphere.cache.HeaderBroadcasterCache;
 import org.atmosphere.client.TrackMessageSizeFilter;
+import org.atmosphere.config.service.MeteorService;
 import org.atmosphere.cpr.*;
 import org.atmosphere.websocket.WebSocketEventListenerAdapter;
 import org.codehaus.groovy.grails.commons.ApplicationAttributes;
@@ -57,6 +58,7 @@ import org.springframework.util.ReflectionUtils;
  * <p/>
  * [Does stuff]
  */
+@MeteorService
 public class EventsPushHandler extends HttpServlet {
 
     static private Logger log = LoggerFactory.getLogger(EventsPushHandler.class);
