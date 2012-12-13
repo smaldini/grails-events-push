@@ -104,7 +104,7 @@ public class EventsPushHandler extends HttpServlet {
 
         if (grailsEvents != null && eventsRegistry != null) {
             Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC, true);
-            b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
+            //b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
             b.getBroadcasterConfig().addFilter(new PerRequestBroadcastFilter() {
                 public BroadcastAction filter(AtmosphereResource atmosphereResource, Object originalMessage, Object message) {
                     BroadcastSignal signal;
