@@ -225,7 +225,8 @@ public class EventsPushHandler extends HttpServlet {
         if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
             req.setAttribute(ApplicationConfig.RESUME_ON_BROADCAST, Boolean.TRUE);
         }
-        m.suspend(-1, false);
+
+        m.suspend(-1);
 
     }
 

@@ -9,7 +9,7 @@
        Register a grailsEvents handler for this window, constructor can take a root URL,
        a path to event-bus servlet and options. There are sensible defaults for each argument
        */
-      window.grailsEvents = new grails.Events("${createLink(uri: '')}", {logLevel:"debug", transport:'sse'});
+      window.grailsEvents = new grails.Events("${createLink(uri: '')}", {logLevel:"debug", transport:'websocket'});
 
        grailsEvents.on("afterInsert", function (data) {
           $("#messages").append("<div>" + $.stringifyJSON(data) + "</div>");

@@ -95,7 +95,7 @@ jQuery.atmosphere = function() {
                 fallbackTransport : 'streaming',
                 transport : 'long-polling',
                 webSocketImpl: null,
-                webSocketUrl: null,
+                dispatchUrl: null,
                 webSocketPathDelimiter: "@@",
                 enableXDR : false,
                 rewriteURL : false,
@@ -263,7 +263,7 @@ jQuery.atmosphere = function() {
              * If request is currently opened, this one will be closed.
              *
              * @param {Object}
-                *            Request parameters.
+             *            Request parameters.
              * @private
              */
             function _subscribe(options) {
@@ -445,8 +445,7 @@ jQuery.atmosphere = function() {
                                             _execute();
                                         } else {
                                             setTimeout(function() {
-                                                _prepareCallback("", "closed", 200, _request.transport);
-                                                _close();
+                                                _execute();
                                             }, 100);
                                         }
                                     }
@@ -703,6 +702,10 @@ jQuery.atmosphere = function() {
                 }
 
                 var url = rq.url;
+                if (rq.dispatchUrl != null) {
+                    url += rq.dispatchUrl;
+                }
+
                 var data = rq.data;
                 if (rq.attachHeadersAsQueryString) {
                     url = _attachHeaders(rq);
@@ -772,6 +775,10 @@ jQuery.atmosphere = function() {
                 }
 
                 var url = rq.url;
+                if (rq.dispatchUrl != null) {
+                    url += rq.dispatchUrl;
+                }
+
                 var data = rq.data;
                 if (rq.attachHeadersAsQueryString) {
                     url = _attachHeaders(rq);
@@ -1204,13 +1211,15 @@ jQuery.atmosphere = function() {
              *          _request object will be used.
              * @private
              */
-            function _attachHeaders(request) {
+            function _attachHeaders(request, url) {
                 var rq = _request;
                 if ((request != null) && (typeof(request) != 'undefined')) {
                     rq = request;
                 }
 
-                var url = rq.url;
+                if (url == null) {
+                    url = rq.url;
+                }
 
                 // If not enabled
                 if (!rq.attachHeadersAsQueryString) return url;
@@ -1260,18 +1269,19 @@ jQuery.atmosphere = function() {
             function _buildAjaxRequest() {
                 var ajaxRequest;
                 if (jQuery.browser.msie) {
-                    var activexmodes = ["Msxml2.XMLHTTP", "Microsoft.XMLHTTP"];
-                    for (var i = 0; i < activexmodes.length; i++) {
-                        try {
-                            ajaxRequest = new ActiveXObject(activexmodes[i]);
-                        } catch(e) {
-                        }
-                    }
-
-                } else if (window.XMLHttpRequest) {
-                    ajaxRequest = new XMLHttpRequest();
+                    if (typeof XMLHttpRequest == "undefined")
+                        XMLHttpRequest = function () {
+                            try { return new ActiveXObject("Msxml2.XMLHTTP.6.0"); }
+                            catch (e) {}
+                            try { return new ActiveXObject("Msxml2.XMLHTTP.3.0"); }
+                            catch (e) {}
+                            try { return new ActiveXObject("Microsoft.XMLHTTP"); }
+                            catch (e) {}
+                            //Microsoft.XMLHTTP points to Msxml2.XMLHTTP and is redundant
+                            throw new Error("This browser does not support XMLHttpRequest.");
+                        };
                 }
-                return ajaxRequest;
+                return new XMLHttpRequest();
             }
 
             /**
@@ -1321,17 +1331,20 @@ jQuery.atmosphere = function() {
                         _response.transport = rq.transport;
                     }
 
-                    var error = false;
                     if (!jQuery.browser.msie) {
                         ajaxRequest.onerror = function() {
-                            error = true;
                             try {
                                 _response.status = XMLHttpRequest.status;
                             } catch(e) {
-                                _response.status = 404;
+                                _response.status = 500;
+                            }
+
+                            if (!_response.status) {
+                                _response.status = 500;
                             }
 
                             _response.state = "error";
+                            _invokeCallback();
                             _reconnect(ajaxRequest, rq, true);
                         };
                     }
@@ -1374,43 +1387,21 @@ jQuery.atmosphere = function() {
                         }
 
                         if (update) {
-                            var responseText = ajaxRequest.responseText;
+                            var responseText = jQuery.trim(ajaxRequest.responseText);
+
+                            // MSIE status can be higher than 1000, Chrome can be 0
+                            if (ajaxRequest.status >= 500 || ajaxRequest.status == 0) {
+                                _onError();
+                                return;
+                            }
 
                             _readHeaders(ajaxRequest, _request);
 
                             if (rq.transport == 'streaming') {
                                 var text = responseText.substring(rq.lastIndex, responseText.length);
-                                _response.isJunkEnded = true;
 
-                                //fix junk is comming in parts
-                                if (!_response.junkFull && (text.indexOf("<!-- Welcome to the Atmosphere Framework.") == -1 || text.indexOf("<!-- EOD -->") == -1)) {
-                                    if (!jQuery.browser.opera)
-                                        return;
-                                }
-                                _response.junkFull = true;
-
-                                //if it's the start and we see the junk start
-                                //fix for reconnecting on chrome - junk is comming in parts
-                                if (rq.lastIndex == 0 && text.indexOf("<!-- Welcome to the Atmosphere Framework.") != -1 && text.indexOf("<!-- EOD -->") != -1) {
-                                    _response.isJunkEnded = false;
-                                }
-
-                                if (!_response.isJunkEnded) {
-                                    var endOfJunk = "<!-- EOD -->";
-                                    var endOfJunkLength = endOfJunk.length;
-                                    var junkEnd = text.indexOf(endOfJunk) + endOfJunkLength;
-
-                                    if (junkEnd > endOfJunkLength && junkEnd != text.length) {
-                                        _response.responseBody = text.substring(junkEnd);
-                                        //fix cached messages
-                                        skipCallbackInvocation = _trackMessageSize(_response.responseBody, rq, _response);
-                                    } else {
-                                        skipCallbackInvocation = true;
-                                    }
-                                } else {
-                                    var message = responseText.substring(rq.lastIndex, responseText.length);
-                                    skipCallbackInvocation = _trackMessageSize(message, rq, _response);
-                                }
+                                var message = responseText.substring(rq.lastIndex, responseText.length);
+                                skipCallbackInvocation = _trackMessageSize(message, rq, _response);
                                 rq.lastIndex = responseText.length;
 
                                 if (jQuery.browser.opera) {
@@ -1434,25 +1425,17 @@ jQuery.atmosphere = function() {
                                                 _response.status = 404;
                                             }
 
-                                            if (!_response.junkFull) {
-                                                var endOfJunk = "<!-- EOD -->";
-                                                var endOfJunkLength = endOfJunk.length;
-                                                var junkEnd = ajaxRequest.responseText.indexOf(endOfJunk) + endOfJunkLength;
-                                                rq.lastIndex = junkEnd; //skip to end of junk
-                                                _response.junkFull = true;
-                                            } else {
-                                                //any message from the server will reset the last ping time
-                                                rq.lastPingTime = (new Date()).getTime();
-                                                _response.state = "messageReceived";
-                                                _response.responseBody = ajaxRequest.responseText.substring(rq.lastIndex);
-                                                rq.lastIndex = ajaxRequest.responseText.length;
+                                            //any message from the server will reset the last ping time
+                                            rq.lastPingTime = (new Date()).getTime();
+                                            _response.state = "messageReceived";
+                                            _response.responseBody = ajaxRequest.responseText.substring(rq.lastIndex);
+                                            rq.lastIndex = ajaxRequest.responseText.length;
 
-                                                _invokeCallback();
-                                                if ((rq.transport == 'streaming') && (ajaxRequest.responseText.length > rq.maxStreamingLength)) {
-                                                    // Close and reopen connection on large data received
-                                                    ajaxRequest.abort();
-                                                    _doRequest(ajaxRequest, rq, true);
-                                                }
+                                            _invokeCallback();
+                                            if ((rq.transport == 'streaming') && (ajaxRequest.responseText.length > rq.maxStreamingLength)) {
+                                                // Close and reopen connection on large data received
+                                                ajaxRequest.abort();
+                                                _doRequest(ajaxRequest, rq, true);
                                             }
                                         }
                                     }, 0);
@@ -1531,7 +1514,11 @@ jQuery.atmosphere = function() {
              */
             function _doRequest(ajaxRequest, request, create) {
                 // Prevent Android to cache request
-                var url = _attachHeaders(request);
+                var url = request.url;
+                if (request.dispatchUrl != null && request.method == 'POST') {
+                    url += request.dispatchUrl;
+                }
+                url = _attachHeaders(request, url);
                 url = jQuery.atmosphere.prepareURL(url);
 
                 if (create) {
@@ -1657,6 +1644,7 @@ jQuery.atmosphere = function() {
                     // XDomain loop forever on itself without this.
                     // TODO: Clearly I need to come with something better than that solution
                     if (rq.lastMessage == xdr.responseText) return;
+                    rq.lastMessage = xdr.responseText;
 
                     if (rq.executeCallbackBeforeReconnect) {
                         xdrCallback(xdr);
@@ -1674,20 +1662,42 @@ jQuery.atmosphere = function() {
                     if (!rq.executeCallbackBeforeReconnect) {
                         xdrCallback(xdr);
                     }
-                    rq.lastMessage = xdr.responseText;
+
                 };
 
                 return {
                     open: function() {
-                        if (rq.method == 'POST') {
-                            rq.attachHeadersAsQueryString = true;
+                        var url = rq.url;
+                        if (rq.dispatchUrl != null) {
+                            url += rq.dispatchUrl;
                         }
-                        var url = _attachHeaders(rq);
-                        if (rq.method == 'POST') {
-                            url += "&X-Atmosphere-Post-Body=" + encodeURIComponent(rq.data);
-                        }
+                        url = _attachHeaders(rq, url);
+                        // IE may not POST the body when the xdr.send(data) for an unknown reason
+                        // when the page reload. Only observed during an unload events, rollback
+                        // to the code below in case of issue.
+                        /*
+                         var url = _attachHeaders(rq);
+                         if (rq.method == 'POST') {
+                         url += "&X-Atmosphere-Post-Body=" + encodeURIComponent(rq.data);
+                         }
+                         xdr.open(rq.method, rewriteURL(url));
+                         xdr.send();
+                         if (rq.connectTimeout > -1) {
+                         rq.id = setTimeout(function () {
+                         if (rq.requestCount == 0) {
+                         xdr.abort();
+                         _prepareCallback("Connect timeout", "closed", 200, rq.transport);
+                         }
+                         }, rq.connectTimeout);
+                         }
+                         */
                         xdr.open(rq.method, rewriteURL(url));
-                        xdr.send();
+                        if (rq.method == 'GET') {
+                            xdr.send();
+                        } else {
+                            xdr.send(rq.data);
+                        }
+
                         if (rq.connectTimeout > -1) {
                             rq.id = setTimeout(function() {
                                 if (rq.requestCount == 0) {
@@ -1723,6 +1733,9 @@ jQuery.atmosphere = function() {
                 doc.close();
 
                 var url = rq.url;
+                if (rq.dispatchUrl != null) {
+                    url += rq.dispatchUrl;
+                }
 
                 if (rq.transport != 'polling') {
                     _response.transport = rq.transport;
@@ -1954,7 +1967,7 @@ jQuery.atmosphere = function() {
                     method: 'POST',
                     url: _request.url,
                     contentType : _request.contentType,
-                    headers: {},
+                    headers: _request.headers,
                     reconnect : true,
                     callback: null,
                     data : msg,
@@ -1962,10 +1975,12 @@ jQuery.atmosphere = function() {
                     maxRequest : 60,
                     logLevel : 'info',
                     requestCount : 0,
+                    withCredentials : _request.withCredentials,
                     transport: 'polling',
                     attachHeadersAsQueryString: true,
                     enableXDR: _request.enableXDR,
-                    uuid : _request.uuid
+                    uuid : _request.uuid,
+                    dispatchUrl: _request.dispatchUrl
                 };
 
                 if (typeof(message) == 'object') {
@@ -1979,7 +1994,7 @@ jQuery.atmosphere = function() {
              * Send a message using currently opened websocket. <br>
              *
              * @param {string, Object}
-                *            Message to send. This is an object, string message is
+             *            Message to send. This is an object, string message is
              *            saved in data member.
              */
             function _pushWebSocket(message) {
@@ -2027,6 +2042,7 @@ jQuery.atmosphere = function() {
                 _response.transport = transport;
                 _response.status = errorCode;
                 _response.state = state;
+                _response.responseBody = messageBody;
 
                 _invokeCallback();
             }
@@ -2036,12 +2052,12 @@ jQuery.atmosphere = function() {
 
                 try {
                     var tempDate = xdr.getResponseHeader('X-Cache-Date');
-                    if (tempDate != null || tempDate != undefined) {
+                    if (tempDate && tempDate != null && tempDate.length > 0 ) {
                         request.lastTimestamp = tempDate.split(" ").pop();
                     }
 
-                    tempUUID = xdr.getResponseHeader('X-Atmosphere-tracking-id');
-                    if (tempUUID != null || tempUUID != undefined) {
+                    var tempUUID = xdr.getResponseHeader('X-Atmosphere-tracking-id');
+                    if (tempUUID && tempUUID != null) {
                         request.uuid = tempUUID.split(" ").pop();
                     }
 
@@ -2098,10 +2114,6 @@ jQuery.atmosphere = function() {
                     func(_response);
                 };
 
-                if (_localStorageService == null && _localSocketF != null) {
-                    _localSocketF(_response.responseBody);
-                }
-
                 var messages = typeof(_response.responseBody) == 'string' ? _response.responseBody.split(_request.messageDelimiter) : new Array(_response.responseBody);
                 for (var i = 0; i < messages.length; i++) {
 
@@ -2110,13 +2122,13 @@ jQuery.atmosphere = function() {
                     }
                     _response.responseBody = jQuery.trim(messages[i]);
 
+                    if (_localStorageService == null && _localSocketF != null) {
+                        _localSocketF(_response.responseBody);
+                    }
+
                     // Ugly see issue 400.
                     if (_response.responseBody.length == 0 && _response.transport == 'streaming' && _response.state == "messageReceived") {
-                        var ua = navigator.userAgent.toLowerCase();
-                        var isAndroid = ua.indexOf("android") > -1;
-                        if (isAndroid) {
-                            continue;
-                        }
+                        continue;
                     }
 
                     _invokeFunction(_response);
@@ -2224,13 +2236,22 @@ jQuery.atmosphere = function() {
                 return _request.url;
             };
 
-            this.push = function(message) {
-                _push(message);
+            this.push = function(message, dispatchUrl) {
+                if (dispatchUrl != null) {
+                    var originalDispatchUrl = _request.dispatchUrl;
+                    _request.dispatchUrl = dispatchUrl;
+                    _push(message);
+                    _request.dispatchUrl = originalDispatchUrl;
+                } else {
+                    _push(message);
+                }
             };
 
             this.pushLocal = function(message) {
                 _intraPush(message);
             };
+
+            this.request = _request;
 
             this.response = _response;
         },
@@ -2268,9 +2289,11 @@ jQuery.atmosphere = function() {
 
         unsubscribe : function() {
             if (jQuery.atmosphere.requests.length > 0) {
-                for (var i = 0; i < jQuery.atmosphere.requests.length; i++) {
-                    jQuery.atmosphere.requests[i].close();
-                    clearTimeout(jQuery.atmosphere.requests[i].id);
+                var requestsClone = [].concat(jQuery.atmosphere.requests);
+                for (var i = 0; i < requestsClone.length; i++) {
+                    var rq = requestsClone[i];
+                    rq.close();
+                    clearTimeout(rq.id);
                 }
             }
             jQuery.atmosphere.requests = [];

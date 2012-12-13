@@ -1,4 +1,4 @@
-grails.servlet.version = "2.5" // Change depending on target container compliance (2.5 or 3.0)
+grails.servlet.version = "3.0" // Change depending on target container compliance (2.5 or 3.0)
 grails.project.class.dir = "target/classes"
 grails.project.test.class.dir = "target/test-classes"
 grails.project.test.reports.dir = "target/test-reports"
@@ -27,23 +27,22 @@ grails.project.dependency.resolution = {
         mavenRepo "https://oss.sonatype.org/content/repositories/releases"
     }
     dependencies {
-        compile('org.atmosphere:atmosphere-runtime:1.0.1') {
+        compile('org.atmosphere:atmosphere-runtime:1.1.0.beta1') {
             excludes 'slf4j-api', 'atmosphere-ping'
         }
     }
 
     plugins {
-        runtime(":jquery:1.8.0") {
+        runtime(":jquery:1.8.0", ":hibernate:$grailsVersion") {
             export = false
         }
 
-        runtime(":resources:1.1.6")
+        runtime(":resources:1.2.RC3")
         build(":tomcat:$grailsVersion",
-                ":release:2.0.4",
-                ":hibernate:$grailsVersion"
+                ":release:2.1.0", ":rest-client-builder:1.0.2"
         ) {
             export = false
         }
-        compile (':platform-core:1.0.M6')
+        compile (':platform-core:1.0.RC2')
     }
 }

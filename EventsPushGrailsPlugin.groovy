@@ -26,7 +26,7 @@ import org.springframework.util.ClassUtils
 
 class EventsPushGrailsPlugin {
     // the plugin version
-    def version = "1.0.M3"
+    def version = "1.0.M4-SNAPSHOT"
     // the version or versions of Grails the plugin is designed for
     def grailsVersion = "2.0 > *"
     // the other plugins this plugin depends on
@@ -73,7 +73,7 @@ the server to the browser.
 //    def developers = [ [ name: "Joe Bloggs", email: "joe@bloggs.net" ]]
 
     // Location of the plugin's issue tracker.
-    def issueManagement = [ system: "GITHUB", url: "https://github.com/smaldini/grails-events-push/issues" ]
+    def issueManagement = [system: "GITHUB", url: "https://github.com/smaldini/grails-events-push/issues"]
 
     // Online location of the plugin's browseable source code.
     def scm = [url: "https://github.com/smaldini/grails-events-push"]
@@ -101,9 +101,11 @@ the server to the browser.
                     'async-supported'(true)
                 }
                 config?.servlet?.initParams.each { initParam ->
-                    'init-param' {
-                        'param-name'(initParam.key)
-                        'param-value'(initParam.value)
+                    if (initParam.key && initParam.value) {
+                        'init-param' {
+                            'param-name'(initParam.key)
+                            'param-value'(initParam.value)
+                        }
                     }
                 }
                 'load-on-startup'('0')
