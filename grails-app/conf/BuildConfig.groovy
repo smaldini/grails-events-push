@@ -33,7 +33,7 @@ grails.project.dependency.resolution = {
     }
 
     plugins {
-        runtime(":jquery:1.8.0", ":hibernate:$grailsVersion") {
+        runtime(":jquery:1.8.3", ":hibernate:$grailsVersion") {
             export = false
         }
 
@@ -43,6 +43,6 @@ grails.project.dependency.resolution = {
         ) {
             export = false
         }
-        compile (':platform-core:1.0.RC2')
+        compile (':platform-core:1.0.RC4')
     }
 }

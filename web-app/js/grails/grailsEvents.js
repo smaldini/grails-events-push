@@ -89,17 +89,21 @@ var grails = grails || {};
                     rq = jQuery.extend(rq, options);
                     rq = jQuery.extend(rq, request);
 
-                    if (!that.globalTopicSocket) {
-                        return socket.subscribe(rq);
-                    } else {
+                    if (that.globalTopicSocket) {
                         socket.unsubscribe();
-                        that.globalTopicSocket = socket.subscribe(rq);
-                        return that.globalTopicSocket;
                     }
+                    that.globalTopicSocket = socket.subscribe(rq);
                 } else {
                     handlers[handlers.length] = handler;
                 }
-                return that.globalTopicSocket;
+                return handler;
+            };
+
+            that.unregisterHandlers = function (topic) {
+                checkSpecified("topic", 'string', topic);
+                delete handlerMap[topic];
+                socket.unsubscribeUrl(that.root + '/' + that.path + '/' + that.globalTopicName);
+                init();
             };
 
             that.unregisterHandler = function (topic, handler) {
@@ -111,10 +115,7 @@ var grails = grails || {};
                     var idx = handlers.indexOf(handler);
                     if (idx != -1) handlers.splice(idx, 1);
                     if (handlers.length == 0) {
-                        // No more local handlers so we should unregister the connection
-                        socket.unsubscribeUrl(that.root + '/' + that.path + '/' + that.globalTopicName);
-                        init();
-                        delete handlerMap[topic];
+                        that.unregisterHandlers(topic);
                     }
                 }
             };
