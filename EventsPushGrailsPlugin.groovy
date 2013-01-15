@@ -98,6 +98,26 @@ the server to the browser.
                         }
                     }
                 }
+
+                if(!config.servlet.initParams.org.atmosphere.cpr.broadcaster.shareableThreadPool)
+                'init-param'{
+                    'param-name' ('org.atmosphere.cpr.broadcaster.shareableThreadPool')
+                    'param-value' (true)
+                }
+
+                if(!config.servlet.initParams.org.atmosphere.cpr.broadcaster.maxProcessingThreads)
+                'init-param'{
+                    'param-name' ('org.atmosphere.cpr.broadcaster.maxProcessingThreads')
+                    'param-value' (20)
+                }
+
+                if(!config.servlet.initParams.org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads)
+                'init-param'{
+                    'param-name' ('org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads')
+                    'param-value' (20)
+                }
+
+
                 'load-on-startup'('0')
             }
         }
