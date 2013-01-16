@@ -174,7 +174,7 @@ var grails = grails || {};
                     }
                 };
 
-                that.globalTopicSocket = that.on(that.globalTopicName, function (data, e) {
+                that.on(that.globalTopicName, function (data, e) {
                     if (that.onglobalmessage) {
                         that.onglobalmessage(data);
                     }
