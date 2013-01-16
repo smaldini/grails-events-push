@@ -43,6 +43,6 @@ grails.project.dependency.resolution = {
         ) {
             export = false
         }
-        compile (':platform-core:1.0.RC4')
+        compile (':platform-core:1.0.RC5')
     }
 }
