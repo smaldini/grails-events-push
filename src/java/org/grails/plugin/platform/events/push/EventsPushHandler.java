@@ -220,8 +220,6 @@ public class EventsPushHandler extends HttpServlet {
                 m.addListener(new AtmosphereResourceEventListenerAdapter());
         }
 
-        res.setContentType("application/javascript; charset=UTF-8");
-
         m.setBroadcaster(defaultBroadcaster);
 
         if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
