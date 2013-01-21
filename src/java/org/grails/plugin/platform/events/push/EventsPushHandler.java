@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import grails.events.GrailsEventsAware;
 import groovy.json.JsonSlurper;
 import groovy.lang.Closure;
 import org.apache.commons.io.IOUtils;
@@ -67,14 +68,14 @@ public class EventsPushHandler extends HttpServlet {
     private EventsRegistry eventsRegistry;
     private BroadcasterFactory broadcasterFactory;
 
-    public static final String ID_GRAILSEVENTS = "grailsEvents";
-    public static final String ID_GRAILSEVENTSREGISTRY = "grailsEventsRegistry";
+    public static final String CONFIG_BRIDGE = "events.push.listener.bridge";
     public static final String TOPICS_HEADER = "topics";
     public static final String GLOBAL_TOPIC = "eventsbus";
-    public static final String PUSH_SCOPE = "browser";
     public static final String CLIENT_BROADCAST_PARAM = "browser";
     public static final String CLIENT_FILTER_PARAM = "browserFilter";
     public static final String DELIMITER = "<@>";
+
+    private AtmosphereResourceEventListener bridgeListener = null;
 
     public HashMap<String, EventDefinition> broadcastersWhiteList = new HashMap<String, EventDefinition>();
 
@@ -86,6 +87,7 @@ public class EventsPushHandler extends HttpServlet {
 
         broadcasterFactory = BroadcasterFactory.getDefault();
         ApplicationContext applicationContext = null;
+        GrailsApplication grailsApplication = null;
         try {
             applicationContext =
                     ((ApplicationContext) getServletContext().getAttribute(ApplicationAttributes.APPLICATION_CONTEXT));
@@ -95,8 +97,9 @@ public class EventsPushHandler extends HttpServlet {
 
         if (applicationContext != null) {
             try {
-                grailsEvents = applicationContext.getBean(ID_GRAILSEVENTS, EventsImpl.class);
-                eventsRegistry = applicationContext.getBean(ID_GRAILSEVENTSREGISTRY, EventsRegistry.class);
+                grailsEvents = applicationContext.getBean(EventsImpl.class);
+                eventsRegistry = applicationContext.getBean(EventsRegistry.class);
+                grailsApplication = applicationContext.getBean(GrailsApplication.class);
             } catch (Exception c) {
                 log.error("Couldn't manage to retrieve beans", c);
             }
@@ -145,9 +148,44 @@ public class EventsPushHandler extends HttpServlet {
                     return new BroadcastAction(message);
                 }
             });
+
             broadcastersWhiteList.putAll(registerTopics(eventsRegistry, grailsEvents));
+
+            defineBridgeListener(grailsApplication, grailsEvents);
+
             b.scheduleFixedBroadcast(2+DELIMITER+"{}", 10, TimeUnit.SECONDS);
         }
+
+    }
+
+    protected void defineBridgeListener(GrailsApplication application, Events grailsEvents){
+        Object bridgeConfig = application.getConfig().flatten().get(CONFIG_BRIDGE);
+
+        if(bridgeConfig == null)
+            return;
+
+        if(Boolean.class.isAssignableFrom(bridgeConfig.getClass()) && (Boolean)bridgeConfig){
+            bridgeListener = new BridgeWSListener();
+        }else if(Class.class.isAssignableFrom(bridgeConfig.getClass())
+                && AtmosphereResourceEventListener.class.isAssignableFrom(((Class)bridgeConfig))){
+            try {
+                bridgeListener = (AtmosphereResourceEventListener)((Class)bridgeConfig).newInstance();
+            } catch (InstantiationException e) {
+                log.error("Failed to create listener", e);
+            } catch (IllegalAccessException e) {
+                log.error("Failed to find constructor for bridge listener",e);
+            }
+        }
+
+        if(bridgeListener != null){
+            log.info("Bridge listener created, all browsers events will be dispatched to "+bridgeListener.toString());
+
+            if(GrailsEventsAware.class.isAssignableFrom(bridgeListener.getClass())){
+                ((GrailsEventsAware)bridgeListener).setGrailsEvents(grailsEvents);
+                log.debug("Platform-core Events are successfully bridged to "+bridgeListener.toString());
+            }
+        }
+
 
     }
 
@@ -220,6 +258,9 @@ public class EventsPushHandler extends HttpServlet {
                 m.addListener(new AtmosphereResourceEventListenerAdapter());
         }
 
+        if (bridgeListener != null)
+            m.addListener(bridgeListener);
+
         m.setBroadcaster(defaultBroadcaster);
 
         if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
@@ -259,7 +300,7 @@ public class EventsPushHandler extends HttpServlet {
             return;
         }
         final Object body = element.containsKey("body") ? element.get("body") : null;
-        grailsEvents.event(PUSH_SCOPE, topic, body != null ? body : element);
+        grailsEvents.event(SharedConstants.PUSH_SCOPE, topic, body != null ? body : element);
     }
 
 //    private String extractTopic(String pathInfo) {

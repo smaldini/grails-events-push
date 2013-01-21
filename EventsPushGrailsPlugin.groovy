@@ -26,7 +26,7 @@ import org.springframework.util.ClassUtils
 
 class EventsPushGrailsPlugin {
     // the plugin version
-    def version = "1.0.M6"
+    def version = "1.0.M7"
     // the version or versions of Grails the plugin is designed for
     def grailsVersion = "2.0 > *"
     // the other plugins this plugin depends on
@@ -87,9 +87,6 @@ the server to the browser.
                 'description'('MeteorServlet')
                 'servlet-name'('MeteorServlet')
                 'servlet-class'(GrailsMeteorServlet.name)
-                if (ClassUtils.isPresent("javax.servlet.AsyncContext", Thread.currentThread().getContextClassLoader())) {
-                    'async-supported'(true)
-                }
                 config?.servlet?.initParams?.each { initParam ->
                     if (initParam.key && initParam.value) {
                         'init-param' {
@@ -119,6 +116,10 @@ the server to the browser.
 
 
                 'load-on-startup'('0')
+
+                if (ClassUtils.isPresent("javax.servlet.AsyncContext", Thread.currentThread().getContextClassLoader())) {
+                    'async-supported'(true)
+                }
             }
         }
 

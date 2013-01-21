@@ -35,11 +35,15 @@ class TestService {
 	@Listener(topic= 'sampleBro-1', namespace = 'browser')
 	def sampleBro(test) {
 
-		println """--> $test"""
 		def ts=new TestDomain(name:'test')
 
 
 		ts.save() //This will trigger the GORM event 'afterInsert' where we have allowed for client listeners in TestEvents.groovy.
 		//any browsers using grailsEvents.on('afterInsert', function(data){...}); will receive a JSON from TestDomain
 	}
+
+    @Listener(namespace='browser')
+    def onDisconnect(event){
+        println 'disconnect'
+    }
 }
