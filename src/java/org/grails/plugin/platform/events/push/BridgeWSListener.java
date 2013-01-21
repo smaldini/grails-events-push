@@ -56,7 +56,7 @@ public class BridgeWSListener implements WebSocketEventListener, GrailsEventsAwa
 
     @Override
     public void onSuspend(AtmosphereResourceEvent event) {
-        //grailsEvents.event(SharedConstants.PUSH_SCOPE, "onConnect", event);
+        grailsEvents.event(SharedConstants.PUSH_SCOPE, "onConnect", event);
     }
 
     @Override
@@ -66,7 +66,7 @@ public class BridgeWSListener implements WebSocketEventListener, GrailsEventsAwa
 
     @Override
     public void onDisconnect(AtmosphereResourceEvent event) {
-        //grailsEvents.event(SharedConstants.PUSH_SCOPE, "onDisconnect", event);
+        grailsEvents.event(SharedConstants.PUSH_SCOPE, "onDisconnect", event);
     }
 
     @Override
