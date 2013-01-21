@@ -90,7 +90,7 @@ the server to the browser.
                 if (ClassUtils.isPresent("javax.servlet.AsyncContext", Thread.currentThread().getContextClassLoader())) {
                     'async-supported'(true)
                 }
-                config?.servlet?.initParams.each { initParam ->
+                config?.servlet?.initParams?.each { initParam ->
                     if (initParam.key && initParam.value) {
                         'init-param' {
                             'param-name'(initParam.key)
@@ -99,19 +99,19 @@ the server to the browser.
                     }
                 }
 
-                if(!config.servlet.initParams.org.atmosphere.cpr.broadcaster.shareableThreadPool)
+                if(!config?.servlet?.initParams?."org.atmosphere.cpr.broadcaster.shareableThreadPool")
                 'init-param'{
                     'param-name' ('org.atmosphere.cpr.broadcaster.shareableThreadPool')
                     'param-value' (true)
                 }
 
-                if(!config.servlet.initParams.org.atmosphere.cpr.broadcaster.maxProcessingThreads)
+                if(!config?.servlet?.initParams?."org.atmosphere.cpr.broadcaster.maxProcessingThreads")
                 'init-param'{
                     'param-name' ('org.atmosphere.cpr.broadcaster.maxProcessingThreads')
                     'param-value' (20)
                 }
 
-                if(!config.servlet.initParams.org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads)
+                if(!config?.servlet?.initParams?."org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads")
                 'init-param'{
                     'param-name' ('org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads')
                     'param-value' (20)
