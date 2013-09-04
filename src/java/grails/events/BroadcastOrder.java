@@ -18,13 +18,8 @@
 package grails.events;
 
 /**
- * @author Stephane Maldini <smaldini@doc4web.com>
+ * @author Stephane Maldini <smaldini@gopivotal.com>
  * @version 1.0
- * @file
- * @date 21/05/12
- * @section DESCRIPTION
- * <p/>
- * [Does stuff]
  */
 public class BroadcastOrder {
 

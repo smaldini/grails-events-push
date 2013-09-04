@@ -18,37 +18,34 @@
 package org.grails.plugin.platform.events.push;
 
 import grails.converters.JSON;
-
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import grails.events.GrailsEventsAware;
 import groovy.json.JsonSlurper;
 import groovy.lang.Closure;
-import org.apache.commons.io.IOUtils;
-import org.atmosphere.cache.HeaderBroadcasterCache;
-import org.atmosphere.client.TrackMessageSizeFilter;
 import org.atmosphere.config.service.MeteorService;
 import org.atmosphere.cpr.*;
 import org.atmosphere.websocket.WebSocketEventListenerAdapter;
 import org.codehaus.groovy.grails.commons.ApplicationAttributes;
 import org.codehaus.groovy.grails.commons.GrailsApplication;
-import org.codehaus.groovy.grails.web.json.JSONElement;
-import org.codehaus.groovy.grails.web.json.JSONObject;
-import org.grails.plugin.platform.events.*;
-import org.grails.plugin.platform.events.registry.EventsRegistry;
+import org.grails.plugins.events.reactor.api.EventsApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.util.ReflectionUtils;
+import reactor.event.Event;
+import reactor.event.selector.Selector;
+import reactor.event.selector.Selectors;
+import reactor.groovy.config.ReactorBuilder;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Stephane Maldini <smaldini@doc4web.com>
@@ -62,186 +59,199 @@ import org.springframework.util.ReflectionUtils;
 @MeteorService
 public class EventsPushHandler extends HttpServlet {
 
-    static private Logger log = LoggerFactory.getLogger(EventsPushHandler.class);
+	static private Logger log = LoggerFactory.getLogger(EventsPushHandler.class);
 
-    private Events grailsEvents;
-    private EventsRegistry eventsRegistry;
-    private BroadcasterFactory broadcasterFactory;
+	private EventsApi          grailsEvents;
+	private BroadcasterFactory broadcasterFactory;
 
-    public static final String CONFIG_BRIDGE = "events.push.listener.bridge";
-    public static final String TOPICS_HEADER = "topics";
-    public static final String GLOBAL_TOPIC = "eventsbus";
-    public static final String CLIENT_BROADCAST_PARAM = "browser";
-    public static final String CLIENT_FILTER_PARAM = "browserFilter";
-    public static final String DELIMITER = "<@>";
+	public static final String CONFIG_BRIDGE          = "grails.events.push.listener.bridge";
+	public static final String TOPICS_HEADER          = "topics";
+	public static final String GLOBAL_TOPIC           = "eventsbus";
+	public static final String CLIENT_FILTER_PARAM    = "browserFilter";
+	public static final String DELIMITER              = "<@>";
 
-    private AtmosphereResourceEventListener bridgeListener = null;
+	private AtmosphereResourceEventListener bridgeListener = null;
 
-    public HashMap<String, EventDefinition> broadcastersWhiteList = new HashMap<String, EventDefinition>();
+	@Override
+	public void init() throws ServletException {
+		super.init();
 
-    private static final Method broadcastEventMethod = ReflectionUtils.findMethod(BroadcastEventWrapper.class, "broadcastEvent", EventMessage.class);
+		broadcasterFactory = BroadcasterFactory.getDefault();
+		ApplicationContext applicationContext = null;
+		GrailsApplication grailsApplication = null;
+		try {
+			applicationContext =
+					((ApplicationContext) getServletContext().getAttribute(ApplicationAttributes.APPLICATION_CONTEXT));
+		} catch (Exception c) {
+			log.error("Couldn't manage to retrieve appContext, servlet ordering problem ?", c);
+		}
 
-    @Override
-    public void init() throws ServletException {
-        super.init();
+		if (applicationContext != null) {
+			try {
+				grailsEvents = applicationContext.getBean(EventsApi.class);
+				grailsApplication = applicationContext.getBean(GrailsApplication.class);
+			} catch (Exception c) {
+				log.error("Couldn't manage to retrieve beans", c);
+			}
+		}
 
-        broadcasterFactory = BroadcasterFactory.getDefault();
-        ApplicationContext applicationContext = null;
-        GrailsApplication grailsApplication = null;
-        try {
-            applicationContext =
-                    ((ApplicationContext) getServletContext().getAttribute(ApplicationAttributes.APPLICATION_CONTEXT));
-        } catch (Exception c) {
-            log.error("Couldn't manage to retrieve appContext, servlet ordering problem ?", c);
-        }
+		if (grailsEvents != null) {
 
-        if (applicationContext != null) {
-            try {
-                grailsEvents = applicationContext.getBean(EventsImpl.class);
-                eventsRegistry = applicationContext.getBean(EventsRegistry.class);
-                grailsApplication = applicationContext.getBean(GrailsApplication.class);
-            } catch (Exception c) {
-                log.error("Couldn't manage to retrieve beans", c);
-            }
-        }
+			Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC, true);
+			//b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
+			b.getBroadcasterConfig().addFilter(new PerRequestBroadcastFilter() {
+				public BroadcastAction filter(AtmosphereResource atmosphereResource, Object originalMessage, Object message) {
+					BroadcastSignal signal;
 
-        if (grailsEvents != null && eventsRegistry != null) {
-            Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC, true);
-            //b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
-            b.getBroadcasterConfig().addFilter(new PerRequestBroadcastFilter() {
-                public BroadcastAction filter(AtmosphereResource atmosphereResource, Object originalMessage, Object message) {
-                    BroadcastSignal signal;
+					String pass = null;
 
-                    Boolean pass = false;
+					if (BroadcastSignal.class.isAssignableFrom(message.getClass())) {
+						signal = (BroadcastSignal) message;
 
-                    if (BroadcastSignal.class.isAssignableFrom(message.getClass())) {
-                        signal = (BroadcastSignal) message;
+						if (atmosphereResource.getRequest().getHeader(TOPICS_HEADER) != null) {
+							String[] topics = atmosphereResource.getRequest().getHeader(TOPICS_HEADER).split(",");
+							for (String topic : topics) {
+								if (signal.selector.matches(topic)) {
+									pass = topic;
+									break;
+								}
+							}
+						}
 
-                        if (atmosphereResource.getRequest().getHeader(TOPICS_HEADER) != null) {
-                            String[] topics = atmosphereResource.getRequest().getHeader(TOPICS_HEADER).split(",");
-                            for (String topic : topics) {
-                                if (topic.equals(signal.eventMessage.getEvent())) {
-                                    pass = true;
-                                    break;
-                                }
-                            }
-                        }
+						if (signal.broadcastClientFilter != null && !(Boolean)signal.broadcastClientFilter.call(
+								signal.eventMessageType ? signal.eventMessage : signal.eventMessage.getData(),
+								atmosphereResource.getRequest()
+						)) {
+							pass = null;
+						}
 
-                        if (signal.broadcastClientFilter != null) {
-                            pass = (Boolean) signal.broadcastClientFilter.call(
-                                    new Object[]{signal.eventMessageType ? signal.eventMessage : signal.eventMessage.getData(),
-                                            atmosphereResource.getRequest()}
-                            );
-                        }
+						if (null != pass) {
+							return new BroadcastAction(jsonify(signal.eventMessage, pass));
+						} else {
+							return new BroadcastAction(BroadcastAction.ACTION.ABORT, null);
+						}
+					}
 
-                        if (pass) {
-                            return new BroadcastAction(jsonify(signal.eventMessage));
-                        } else {
-                            return new BroadcastAction(BroadcastAction.ACTION.ABORT, null);
-                        }
-                    }
+					return new BroadcastAction(message);
+				}
 
-                    return new BroadcastAction(message);
-                }
+				public BroadcastAction filter(Object originalMessage, Object message) {
+					return new BroadcastAction(message);
+				}
+			});
 
-                public BroadcastAction filter(Object originalMessage, Object message) {
-                    return new BroadcastAction(message);
-                }
-            });
+			defineBridgeListener(grailsApplication, grailsEvents);
+			registerTopics(grailsEvents);
 
-            broadcastersWhiteList.putAll(registerTopics(eventsRegistry, grailsEvents));
+			b.scheduleFixedBroadcast(2 + DELIMITER + "{}", 10, TimeUnit.SECONDS);
+		}
 
-            defineBridgeListener(grailsApplication, grailsEvents);
+	}
 
-            b.scheduleFixedBroadcast(2+DELIMITER+"{}", 10, TimeUnit.SECONDS);
-        }
+	protected void defineBridgeListener(GrailsApplication application, EventsApi grailsEvents) {
+		Object bridgeConfig = application.getConfig().flatten().get(CONFIG_BRIDGE);
 
-    }
+		if (bridgeConfig == null)
+			return;
 
-    protected void defineBridgeListener(GrailsApplication application, Events grailsEvents){
-        Object bridgeConfig = application.getConfig().flatten().get(CONFIG_BRIDGE);
+		if (Boolean.class.isAssignableFrom(bridgeConfig.getClass()) && (Boolean) bridgeConfig) {
+			bridgeListener = new BridgeWSListener();
+		} else if (Class.class.isAssignableFrom(bridgeConfig.getClass())
+				&& AtmosphereResourceEventListener.class.isAssignableFrom(((Class) bridgeConfig))) {
+			try {
+				bridgeListener = (AtmosphereResourceEventListener) ((Class) bridgeConfig).newInstance();
+			} catch (InstantiationException e) {
+				log.error("Failed to create listener", e);
+			} catch (IllegalAccessException e) {
+				log.error("Failed to find constructor for bridge listener", e);
+			}
+		}
 
-        if(bridgeConfig == null)
-            return;
+		if (bridgeListener != null) {
+			log.info("Bridge listener created, all browsers events will be dispatched to " + bridgeListener.toString());
 
-        if(Boolean.class.isAssignableFrom(bridgeConfig.getClass()) && (Boolean)bridgeConfig){
-            bridgeListener = new BridgeWSListener();
-        }else if(Class.class.isAssignableFrom(bridgeConfig.getClass())
-                && AtmosphereResourceEventListener.class.isAssignableFrom(((Class)bridgeConfig))){
-            try {
-                bridgeListener = (AtmosphereResourceEventListener)((Class)bridgeConfig).newInstance();
-            } catch (InstantiationException e) {
-                log.error("Failed to create listener", e);
-            } catch (IllegalAccessException e) {
-                log.error("Failed to find constructor for bridge listener",e);
-            }
-        }
-
-        if(bridgeListener != null){
-            log.info("Bridge listener created, all browsers events will be dispatched to "+bridgeListener.toString());
-
-            if(GrailsEventsAware.class.isAssignableFrom(bridgeListener.getClass())){
-                ((GrailsEventsAware)bridgeListener).setGrailsEvents(grailsEvents);
-                log.debug("Platform-core Events are successfully bridged to "+bridgeListener.toString());
-            }
-        }
+			if (GrailsEventsAware.class.isAssignableFrom(bridgeListener.getClass())) {
+				((GrailsEventsAware) bridgeListener).setGrailsEvents(grailsEvents);
+				log.debug("Platform-core Events are successfully bridged to " + bridgeListener.toString());
+			}
+		}
 
 
-    }
+	}
 
-    static public Map<String, EventDefinition> registerTopics(EventsRegistry eventsRegistry, Events grailsEvents) {
-        Map<String, EventDefinition> doneTopics = new HashMap<String, EventDefinition>();
-        Object broadcastClient;
-        Closure broadcastClientFilter;
-        Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC);
+	@SuppressWarnings("unchecked")
+	static public void registerTopics(EventsApi grailsEvents) {
+		Collection<ReactorBuilder> pushBuilders =
+				grailsEvents.getGroovyEnvironment().reactorBuildersByExtension(SharedConstants.PUSH_SCOPE);
 
-        for (EventDefinition eventDefinition : grailsEvents.getEventDefinitions()) {
-            String topic = eventDefinition.getTopic();
-            broadcastClient = null;
-            broadcastClientFilter = null;
+		Closure broadcastClientFilter;
+		Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC);
+		Object cursor;
+		Selector selector;
+		Object key;
+		Iterator iterableConfiguration;
 
-            if (eventDefinition.getOthersAttributes() != null) {
-                broadcastClient = eventDefinition.getOthersAttributes().get(CLIENT_BROADCAST_PARAM);
-                broadcastClientFilter = (Closure) eventDefinition.getOthersAttributes().get(CLIENT_FILTER_PARAM);
-            }
+		for (ReactorBuilder pushBuilder : pushBuilders) {
+			cursor = pushBuilder.ext(SharedConstants.PUSH_SCOPE);
+			if (!Map.class.isAssignableFrom(cursor.getClass()) && !Collection.class.isAssignableFrom(cursor.getClass())) {
+				continue;
+			}
 
-            broadcastClient = broadcastClient != null ? broadcastClient : false;
+			iterableConfiguration = Map.class.isAssignableFrom(cursor.getClass()) ?
+					((Map) cursor).entrySet().iterator() :
+					((Collection) cursor).iterator();
 
-            if (topic != null && ((Boolean) broadcastClient) &&
-                    !doneTopics.containsKey(topic)) {
-                eventsRegistry.on(eventDefinition.getNamespace(), topic, new BroadcastEventWrapper(b, broadcastClientFilter), broadcastEventMethod);
+			while (iterableConfiguration.hasNext()) {
+				cursor = iterableConfiguration.next();
+				broadcastClientFilter = null;
 
-                doneTopics.put(topic, eventDefinition);
-            }
-        }
-        return doneTopics;
-    }
+				if (Map.Entry.class.isAssignableFrom(cursor.getClass())) {
+					key = ((Map.Entry) cursor).getKey();
+					if (((Map.Entry) cursor).getValue() != null &&
+							Map.class.isAssignableFrom(((Map.Entry) cursor).getValue().getClass())) {
+						broadcastClientFilter = (Closure) ((Map) ((Map.Entry) cursor).getValue()).get(CLIENT_FILTER_PARAM);
+					}
+				} else {
+					key = cursor;
+				}
 
-    private String jsonify(EventMessage message) {
-        Map<String, Object> jsonResponse = new HashMap<String, Object>();
-        jsonResponse.put("topic", message.getEvent());
-        jsonResponse.put("body", message.getData());
-        String res = new JSON(jsonResponse).toString();
-        return res.length() + DELIMITER + res;
-    }
+				if (key != null) {
+					selector = Selector.class.isAssignableFrom(key.getClass()) ?
+							(Selector) key :
+							Selectors.$(key);
 
-    @Override
-    public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        Broadcaster defaultBroadcaster = broadcasterFactory.lookup(GLOBAL_TOPIC);
-        if (defaultBroadcaster == null) {
-            res.sendError(403);
-            return;
-        }
+					pushBuilder.get().on(selector, new BroadcastEventConsumer(selector, b, broadcastClientFilter));
 
-        String header = req.getHeader(HeaderConfig.X_ATMOSPHERE_TRANSPORT);
-        String _topics = req.getHeader(TOPICS_HEADER);
-        if (_topics == null)
-            return;
+				}
+			}
+		}
+	}
+
+	private String jsonify(Event<?> message, Object key) {
+		Map<String, Object> jsonResponse = new HashMap<String, Object>();
+		jsonResponse.put("topic", key);
+		jsonResponse.put("body", message.getData());
+		String res = new JSON(jsonResponse).toString();
+		return res.length() + DELIMITER + res;
+	}
+
+	@Override
+	public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
+		Broadcaster defaultBroadcaster = broadcasterFactory.lookup(GLOBAL_TOPIC);
+		if (defaultBroadcaster == null) {
+			res.sendError(403);
+			return;
+		}
+
+		String header = req.getHeader(HeaderConfig.X_ATMOSPHERE_TRANSPORT);
+		String _topics = req.getHeader(TOPICS_HEADER);
+		if (_topics == null)
+			return;
 
 //        String[] topics = _topics.split(",");
 
-        // Create a Meteor
-        Meteor m = Meteor.build(req);
+		// Create a Meteor
+		Meteor m = Meteor.build(req);
 
 //        for (String topic : topics) {
 //            if (topic.equals(GLOBAL_TOPIC))
@@ -250,26 +260,26 @@ public class EventsPushHandler extends HttpServlet {
 //            lookupTopic(topic, m);
 //        }
 
-        // Log all events on the console, including WebSocket events.
-        if (log.isDebugEnabled()) {
-            if (m.transport().equals(AtmosphereResource.TRANSPORT.WEBSOCKET))
-                m.addListener(new WebSocketEventListenerAdapter());
-            else
-                m.addListener(new AtmosphereResourceEventListenerAdapter());
-        }
+		// Log all events on the console, including WebSocket events.
+		if (log.isDebugEnabled()) {
+			if (m.transport().equals(AtmosphereResource.TRANSPORT.WEBSOCKET))
+				m.addListener(new WebSocketEventListenerAdapter());
+			else
+				m.addListener(new AtmosphereResourceEventListenerAdapter());
+		}
 
-        if (bridgeListener != null)
-            m.addListener(bridgeListener);
+		if (bridgeListener != null)
+			m.addListener(bridgeListener);
 
-        m.setBroadcaster(defaultBroadcaster);
+		m.setBroadcaster(defaultBroadcaster);
 
-        if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
-            req.setAttribute(ApplicationConfig.RESUME_ON_BROADCAST, Boolean.TRUE);
-        }
+		if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
+			req.setAttribute(ApplicationConfig.RESUME_ON_BROADCAST, Boolean.TRUE);
+		}
 
-        m.suspend(-1);
+		m.suspend(-1);
 
-    }
+	}
 
 //    private void lookupTopic(String topic, Meteor m) {
 //        Broadcaster b = broadcasterFactory.lookup(topic);
@@ -283,25 +293,17 @@ public class EventsPushHandler extends HttpServlet {
 //        }
 //    }
 
-    private Map.Entry<String, EventDefinition> matchesWhitelist(String topic) {
-        for (Map.Entry<String, EventDefinition> whitelistedTopic : broadcastersWhiteList.entrySet()) {
-            if (ListenerId.matchesTopic(whitelistedTopic.getKey(), topic, false))
-                return whitelistedTopic;
-        }
+	public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+		Map element = (Map) new JsonSlurper().parse(new InputStreamReader(req.getInputStream()));
 
-        return null;
-    }
+		String topic = element.containsKey("topic") ? element.get("topic").toString() : null;
+		if (topic == null) {
+			return;
+		}
 
-    public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        Map element = (Map)new JsonSlurper().parse(new InputStreamReader(req.getInputStream()));
-
-        String topic = element.containsKey("topic") ? element.get("topic").toString() : null;
-        if (topic == null) {
-            return;
-        }
-        final Object body = element.containsKey("body") ? element.get("body") : null;
-        grailsEvents.event(SharedConstants.PUSH_SCOPE, topic, body != null ? body : element);
-    }
+		final Object body = element.containsKey("body") ? element.get("body") : null;
+		grailsEvents.event(this, topic, body != null ? body : element, SharedConstants.PUSH_SCOPE, null, null, null);
+	}
 
 //    private String extractTopic(String pathInfo) {
 //        String[] decodedPath = pathInfo.split("/");

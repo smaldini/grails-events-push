@@ -15,22 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-import org.atmosphere.cpr.ApplicationConfig
-import org.atmosphere.cpr.MeteorServlet
 import org.grails.plugin.platform.events.push.EventsPushHandler
 import org.grails.plugin.platform.events.push.GrailsMeteorServlet
+import org.grails.plugins.events.reactor.configuration.EventsArtefactHandler
 import org.springframework.util.ClassUtils
 
 class EventsPushGrailsPlugin {
     // the plugin version
-    def version = "1.0.M7"
+    def version = "1.0.0.BUILD-SNAPSHOT"
     // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "2.0 > *"
+    def grailsVersion = "2.2 > *"
     // the other plugins this plugin depends on
-    def loadAfter = ['platformCore']
+    def loadAfter = ['events']
     // resources that are excluded from plugin packaging
     def pluginExcludes = [
             "grails-app/views/error.gsp",
@@ -44,14 +40,15 @@ class EventsPushGrailsPlugin {
             "web-app/WEB-INF/**"
     ]
 
-    def observe = ['platformCore']
+    def observe = ['events']
 
     def title = "Events Push Plugin" // Headline display name of the plugin
     def author = "Stephane Maldini"
-    def authorEmail = "smaldini@vmware.com"
+    def authorEmail = "smaldini@gopivotal.com"
     def description = '''\
 This is a client-side event bus based on the portable push library [Atmosphere|https://github.com/Atmosphere/atmosphere]\
-that propagates events from the server-side event bus provided by the [Platform Core|http://grails.org/plugin/platform-core]\
+that propagates events from the server-side event bus provided by the [Events Plugin |http://grails
+.org/plugin/events]\
 to the browser. It allows your client Javascript code to both send events and listen for them.
 
 For security, events-push is a white-list broadcaster so that you can control exactly which events are propagated from\
@@ -80,7 +77,7 @@ the server to the browser.
 
     def doWithWebDescriptor = { xml ->
         def servlets = xml.'servlet'
-        def config = application.config?.events?.push
+        def config = application.config?.grails?.events?.push
 
         servlets[servlets.size() - 1] + {
             'servlet' {
@@ -133,8 +130,8 @@ the server to the browser.
     }
 
     def onChange = { event ->
-        if (application.isArtefactOfType('Events', event.source)) {
-            EventsPushHandler.registerTopics(event.ctx.grailsEventsRegistry, event.ctx.grailsEvents)
-        }
+	    if (application.isArtefactOfType(EventsArtefactHandler.TYPE, event.source)) {
+		    EventsPushHandler.registerTopics(event.ctx.instanceEventsApi)
+	    }
     }
 }

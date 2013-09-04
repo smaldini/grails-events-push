@@ -1,16 +1,19 @@
 package org.grails.plugin.platform.events.push;
 
 import groovy.lang.Closure;
-import org.grails.plugin.platform.events.EventMessage;
+import reactor.event.Event;
+import reactor.event.selector.Selector;
 
-public class BroadcastSignal {
-    boolean eventMessageType = false;
-    EventMessage eventMessage;
-    Closure broadcastClientFilter;
+public class BroadcastSignal<T> {
+	final boolean  eventMessageType;
+	final Selector selector;
+	final Event<T> eventMessage;
+	final Closure  broadcastClientFilter;
 
-    public BroadcastSignal(EventMessage message, boolean eventMessageType, Closure broadcastClientFilter) {
-        this.eventMessage = message;
-        this.eventMessageType = eventMessageType;
-        this.broadcastClientFilter = broadcastClientFilter;
-    }
+	public BroadcastSignal(Selector selector, Event<T> message, boolean eventMessageType, Closure broadcastClientFilter) {
+		this.eventMessage = message;
+		this.eventMessageType = eventMessageType;
+		this.selector = selector;
+		this.broadcastClientFilter = broadcastClientFilter;
+	}
 }

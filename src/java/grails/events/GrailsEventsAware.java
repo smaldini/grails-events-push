@@ -1,13 +1,11 @@
 package grails.events;
 
-import org.grails.plugin.platform.events.Events;
+import org.grails.plugins.events.reactor.api.EventsApi;
 
 /**
  * Author: smaldini
- * Date: 1/21/13
- * Project: events-push
  */
 public interface GrailsEventsAware {
 
-    void setGrailsEvents(Events grailsEvents);
+    void setGrailsEvents(EventsApi grailsEvents);
 }

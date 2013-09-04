@@ -166,7 +166,8 @@
         /*
          Same sending method than above but using click button.
          */
-        grailsEvents.send("sampleBro", {message:$('#phrase').val()});
+         console.log($('#topic').val());
+        grailsEvents.send($('#topic').val(), {message:$('#phrase').val()});
         $('#phrase').val('');
         return false;
       });

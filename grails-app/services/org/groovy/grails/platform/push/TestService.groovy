@@ -17,7 +17,8 @@
  */
 package org.groovy.grails.platform.push
 
-import grails.events.Listener
+import groovy.transform.CompileStatic
+import reactor.spring.annotation.Selector
 
 
 /**
@@ -29,20 +30,19 @@ import grails.events.Listener
  *
  * [Does stuff]
  */
+@CompileStatic
 class TestService {
 
 	//Listen for sampleBro events, the TestEvents.groovy DSL will configure this topic to observe clients by using scope : 'browser'
-	@Listener(topic= 'sampleBro-1', namespace = 'browser')
+	@Selector(value = 'sampleBro-1', reactor = 'browser')
 	def sampleBro(test) {
-
 		def ts=new TestDomain(name:'test')
-
 
 		ts.save() //This will trigger the GORM event 'afterInsert' where we have allowed for client listeners in TestEvents.groovy.
 		//any browsers using grailsEvents.on('afterInsert', function(data){...}); will receive a JSON from TestDomain
 	}
 
-    @Listener(namespace='browser')
+    @Selector(reactor ='browser')
     def onDisconnect(event){
         println 'disconnect'
     }
