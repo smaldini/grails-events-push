@@ -7,11 +7,11 @@ includes = ['push']
 doWithReactor = {
 
 	reactor('grailsReactor'){
+
 		ext 'gorm', true
 		ext 'browser', [
 				'test' : true,
 				'afterInsert' : [
-						filter:TestDomain,
 						browserFilter:{m,r-> true }
 				],
 				(R("sampleBro-.*")) : true,

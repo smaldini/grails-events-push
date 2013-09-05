@@ -302,7 +302,7 @@ public class EventsPushHandler extends HttpServlet {
 		}
 
 		final Object body = element.containsKey("body") ? element.get("body") : null;
-		grailsEvents.event(this, topic, body != null ? body : element, SharedConstants.PUSH_SCOPE, null, null, null);
+		grailsEvents.event(topic, body != null ? body : element, SharedConstants.PUSH_SCOPE, null, null, null);
 	}
 
 //    private String extractTopic(String pathInfo) {
