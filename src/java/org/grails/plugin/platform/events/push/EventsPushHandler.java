@@ -48,7 +48,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * @author Stephane Maldini <smaldini@doc4web.com>
+ * @author Stephane Maldini <smaldini@gopivotal.com>
  * @version 1.0
  * @file
  * @date 16/05/12

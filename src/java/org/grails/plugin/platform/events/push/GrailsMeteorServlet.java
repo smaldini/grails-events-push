@@ -10,7 +10,7 @@ import org.atmosphere.cpr.MeteorServlet;
 import org.atmosphere.handler.ReflectorServletProcessor;
 
 /**
- * @author Stephane Maldini <smaldini@doc4web.com>
+ * @author Stephane Maldini <smaldini@gopivotal.com>
  * @version 1.0
  * @file
  * @date 26/05/12

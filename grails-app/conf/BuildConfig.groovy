@@ -5,8 +5,8 @@ grails.project.test.reports.dir = "target/test-reports"
 grails.project.target.level = 1.6
 grails.project.source.level = 1.6
 grails.project.dependency.resolver = "maven"
-//grails.project.war.file = "target/${appName}-${appVersion}.war"
 grails.tomcat.nio = true
+//grails.project.war.file = "target/${appName}-${appVersion}.war"
 //grails.plugin.location.'platformCore' = '../../platform-core'
 
 
@@ -25,6 +25,7 @@ grails.project.dependency.resolution = {
         //mavenRepo "http://repository.codehaus.org"
         //mavenRepo "http://download.java.net/maven/2/"
         //mavenRepo "http://repository.jboss.com/maven2/"
+        mavenRepo "http://repo.grails.org/grails/libs-snapshots-local/"
         mavenRepo "https://oss.sonatype.org/content/repositories/snapshots"
     }
     dependencies {
