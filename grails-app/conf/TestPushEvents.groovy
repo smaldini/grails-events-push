@@ -1,4 +1,4 @@
-import org.grails.plugin.platform.events.push.SharedConstants
+import org.grails.plugin.platform.events.push.EventsPushScopes
 import org.groovy.grails.platform.push.TestDomain
 import static reactor.event.selector.Selectors.*
 
@@ -18,7 +18,7 @@ doWithReactor = {
 		]
 	}
 
-	reactor(SharedConstants.PUSH_SCOPE){
+	reactor(EventsPushScopes.FROM_BROWSERS){
 		ext 'browser', [R("sampleBro-.*")]
 	}
 }

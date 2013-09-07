@@ -1,8 +1,8 @@
-import org.grails.plugin.platform.events.push.SharedConstants
+import org.grails.plugin.platform.events.push.EventsPushScopes
 
 includes = ['default']
 
 doWithReactor = {
 
-	reactor(SharedConstants.PUSH_SCOPE){ }
+	reactor(EventsPushScopes.FROM_BROWSERS){ }
 }

@@ -20,7 +20,7 @@ log4j = {
     environments{
         development{
             debug 'org.atmosphere'
-            debug 'org.grails.'
+            debug 'org.grails'
         }
     }
 
