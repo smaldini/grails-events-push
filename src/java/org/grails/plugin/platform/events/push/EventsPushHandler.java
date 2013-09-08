@@ -71,7 +71,7 @@ public class EventsPushHandler extends HttpServlet {
 	public static final String CLIENT_FILTER_PARAM = "browserFilter";
 	public static final String PUSH_BODY           = "body";
 	public static final String PUSH_TOPIC          = "topic";
-	public static final String DELIMITER           = "|";
+	public static final String DELIMITER           = "<@>";
 
 	private AtmosphereResourceEventListener bridgeListener = null;
 

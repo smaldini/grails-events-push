@@ -70,18 +70,20 @@ var grails = grails || {};
                     }
                     //request.shared = true;
                     var rq = {
-                        messageDelimiter:'|',
+                        messageDelimiter:'<@>',
                         trackMessageLength : true,
                         headers:{'topics':topics},
                         url:that.root + '/' + that.path + '/' + that.globalTopicName,
                         transport:"websocket",
                         fallbackTransport: "streaming",
-                        reconnectInterval:4000
+                        reconnectInterval:4000,
+                        localId:_localId
                     };
 
                     if(!!window.EventSource){
                        rq.fallbackTransport = 'sse';
                     }
+
 
                     // Allow the user to extend/override the request
                     rq = jQuery.extend(true, rq, options);
