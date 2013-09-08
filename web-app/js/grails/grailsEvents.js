@@ -77,7 +77,6 @@ var grails = grails || {};
                         transport:"websocket",
                         fallbackTransport: "streaming",
                         reconnectInterval:4000,
-                        localId:_localId
                     };
 
                     if(!!window.EventSource){
