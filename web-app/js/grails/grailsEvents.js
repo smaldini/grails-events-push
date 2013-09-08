@@ -69,23 +69,19 @@ var grails = grails || {};
                         topics = topics.substr(0, topics.length - 1);
                     }
                     //request.shared = true;
-                    var _localId = socket.guid();
                     var rq = {
-                        messageDelimiter:'<@>',
+                        messageDelimiter:'|',
                         trackMessageLength : true,
                         headers:{'topics':topics},
                         url:that.root + '/' + that.path + '/' + that.globalTopicName,
                         transport:"websocket",
                         fallbackTransport: "streaming",
-                        reconnectInterval:4000,
-                        localId:_localId
+                        reconnectInterval:4000
                     };
 
                     if(!!window.EventSource){
                        rq.fallbackTransport = 'sse';
                     }
-
-                    localId = _localId;
 
                     // Allow the user to extend/override the request
                     rq = jQuery.extend(true, rq, options);

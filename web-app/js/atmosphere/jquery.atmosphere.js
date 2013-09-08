@@ -1094,7 +1094,9 @@ jQuery.atmosphere = function() {
                     }
 
                     webSocketOpened = true;
-                    _websocket.webSocketOpened = webSocketOpened;
+                    if(_websocket){
+                        _websocket.webSocketOpened = webSocketOpened;
+                    }
 
                     if (_request.method === 'POST') {
                         _response.state = "messageReceived";

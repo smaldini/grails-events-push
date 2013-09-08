@@ -21,6 +21,7 @@ import grails.converters.JSON;
 import grails.events.GrailsEventsAware;
 import groovy.json.JsonSlurper;
 import groovy.lang.Closure;
+import org.atmosphere.cache.UUIDBroadcasterCache;
 import org.atmosphere.config.service.MeteorService;
 import org.atmosphere.cpr.*;
 import org.atmosphere.websocket.WebSocketEventListenerAdapter;
@@ -64,11 +65,13 @@ public class EventsPushHandler extends HttpServlet {
 	private EventsApi          grailsEvents;
 	private BroadcasterFactory broadcasterFactory;
 
-	public static final String CONFIG_BRIDGE          = "grails.events.push.listener.bridge";
-	public static final String TOPICS_HEADER          = "topics";
-	public static final String GLOBAL_TOPIC           = "eventsbus";
-	public static final String CLIENT_FILTER_PARAM    = "browserFilter";
-	public static final String DELIMITER              = "<@>";
+	public static final String CONFIG_BRIDGE       = "grails.events.push.listener.bridge";
+	public static final String TOPICS_HEADER       = "topics";
+	public static final String GLOBAL_TOPIC        = "eventsbus";
+	public static final String CLIENT_FILTER_PARAM = "browserFilter";
+	public static final String PUSH_BODY           = "body";
+	public static final String PUSH_TOPIC          = "topic";
+	public static final String DELIMITER           = "|";
 
 	private AtmosphereResourceEventListener bridgeListener = null;
 
@@ -98,7 +101,9 @@ public class EventsPushHandler extends HttpServlet {
 		if (grailsEvents != null) {
 
 			Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC, true);
-			//b.getBroadcasterConfig().setBroadcasterCache(new HeaderBroadcasterCache());
+			if (b.getBroadcasterConfig().getBroadcasterCache() == null) {
+				b.getBroadcasterConfig().setBroadcasterCache(new UUIDBroadcasterCache());
+			}
 			b.getBroadcasterConfig().addFilter(new PerRequestBroadcastFilter() {
 				public BroadcastAction filter(AtmosphereResource atmosphereResource, Object originalMessage, Object message) {
 					BroadcastSignal signal;
@@ -118,7 +123,7 @@ public class EventsPushHandler extends HttpServlet {
 							}
 						}
 
-						if (signal.broadcastClientFilter != null && !(Boolean)signal.broadcastClientFilter.call(
+						if (signal.broadcastClientFilter != null && !(Boolean) signal.broadcastClientFilter.call(
 								signal.eventMessageType ? signal.eventMessage : signal.eventMessage.getData(),
 								atmosphereResource.getRequest()
 						)) {
@@ -172,7 +177,7 @@ public class EventsPushHandler extends HttpServlet {
 
 			if (GrailsEventsAware.class.isAssignableFrom(bridgeListener.getClass())) {
 				((GrailsEventsAware) bridgeListener).setGrailsEvents(grailsEvents);
-				log.debug("Platform-core Events are successfully bridged to " + bridgeListener.toString());
+				log.debug("Grails Events are successfully bridged to " + bridgeListener.toString());
 			}
 		}
 
@@ -229,8 +234,8 @@ public class EventsPushHandler extends HttpServlet {
 
 	private String jsonify(Event<?> message, Object key) {
 		Map<String, Object> jsonResponse = new HashMap<String, Object>();
-		jsonResponse.put("topic", key);
-		jsonResponse.put("body", message.getData());
+		jsonResponse.put(PUSH_TOPIC, key);
+		jsonResponse.put(PUSH_BODY, message.getData());
 		String res = new JSON(jsonResponse).toString();
 		return res.length() + DELIMITER + res;
 	}
@@ -248,17 +253,8 @@ public class EventsPushHandler extends HttpServlet {
 		if (_topics == null)
 			return;
 
-//        String[] topics = _topics.split(",");
-
 		// Create a Meteor
 		Meteor m = Meteor.build(req);
-
-//        for (String topic : topics) {
-//            if (topic.equals(GLOBAL_TOPIC))
-//                continue;
-//
-//            lookupTopic(topic, m);
-//        }
 
 		// Log all events on the console, including WebSocket events.
 		if (log.isDebugEnabled()) {
@@ -296,13 +292,16 @@ public class EventsPushHandler extends HttpServlet {
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
 		Map element = (Map) new JsonSlurper().parse(new InputStreamReader(req.getInputStream()));
 
-		String topic = element.containsKey("topic") ? element.get("topic").toString() : null;
+		String topic = element.containsKey(PUSH_TOPIC) ? element.get(PUSH_TOPIC).toString() : null;
 		if (topic == null) {
 			return;
 		}
 
-		final Object body = element.containsKey("body") ? element.get("body") : null;
-		grailsEvents.event(topic, body != null ? body : element, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		if (element.containsKey(PUSH_BODY)) {
+			grailsEvents.event(topic, element.get(PUSH_BODY), EventsPushScopes.FROM_BROWSERS, null, null, null);
+		} else {
+			grailsEvents.event(topic, element.get(PUSH_BODY), EventsPushScopes.FROM_BROWSERS, null, null, null);
+		}
 	}
 
 //    private String extractTopic(String pathInfo) {
