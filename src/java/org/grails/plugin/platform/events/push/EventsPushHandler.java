@@ -182,7 +182,7 @@ public class EventsPushHandler extends HttpServlet {
 	@SuppressWarnings("unchecked")
 	static public void registerTopics(EventsApi grailsEvents) {
 		Collection<ReactorBuilder> pushBuilders =
-				grailsEvents.getGroovyEnvironment().reactorBuildersByExtension(EventsPushScopes.TO_BROWSER);
+				grailsEvents.getGroovyEnvironment().reactorBuildersByExtension(EventsPushScopes.TO_BROWSERS);
 
 		Closure broadcastClientFilter;
 		Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC);
@@ -192,7 +192,7 @@ public class EventsPushHandler extends HttpServlet {
 		Iterator iterableConfiguration;
 
 		for (ReactorBuilder pushBuilder : pushBuilders) {
-			cursor = pushBuilder.ext(EventsPushScopes.TO_BROWSER);
+			cursor = pushBuilder.ext(EventsPushScopes.TO_BROWSERS);
 			if (!Map.class.isAssignableFrom(cursor.getClass()) && !Collection.class.isAssignableFrom(cursor.getClass())) {
 				continue;
 			}
