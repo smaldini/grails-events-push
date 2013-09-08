@@ -143,7 +143,7 @@ public class EventsPushHandler extends HttpServlet {
 			defineBridgeListener(grailsApplication, grailsEvents);
 			registerTopics(grailsEvents);
 
-			b.scheduleFixedBroadcast(2 + DELIMITER + "{}", 10, TimeUnit.SECONDS);
+			//b.scheduleFixedBroadcast(2 + DELIMITER + "{}", 10, TimeUnit.SECONDS);
 		}
 
 	}
