@@ -10,7 +10,7 @@ modules = {
     }
 
     'grailsEvents' {
-        dependsOn 'atmosphere'
+        dependsOn 'atmosphere-jquery'
         resource id:'js', url:[plugin: 'events-push', dir:'js/grails', file:"grailsEvents.js"]
     }
 

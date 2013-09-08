@@ -1,6 +1,6 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-    <r:require modules="grailsEvents"/>
+    <r:require modules="jquery, grailsEvents"/>
     <meta name='layout' content='main'/>
     <r:script>
     $(document).ready(function () {
