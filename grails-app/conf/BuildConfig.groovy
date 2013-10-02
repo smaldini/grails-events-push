@@ -18,15 +18,13 @@ grails.project.dependency.resolution = {
 
 	log "warn" // log level of Ivy resolver, either 'error', 'warn', 'info', 'debug' or 'verbose'
 	repositories {
-        mavenLocal()
-        grailsCentral()
-        mavenCentral()
-        //mavenRepo "http://snapshots.repository.codehaus.org"
-        //mavenRepo "http://repository.codehaus.org"
-        //mavenRepo "http://download.java.net/maven/2/"
-        //mavenRepo "http://repository.jboss.com/maven2/"
+        //mavenLocal()
+      	mavenRepo "http://repo.springsource.org/libs-milestone"
+				mavenRepo "http://repo.springsource.org/libs-snapshot"
         mavenRepo "http://repo.grails.org/grails/libs-snapshots-local/"
         mavenRepo "https://oss.sonatype.org/content/repositories/snapshots"
+				grailsCentral()
+				mavenCentral()
     }
     dependencies {
 	      compile 'org.grails.plugins:events:1.0.0.BUILD-SNAPSHOT'
