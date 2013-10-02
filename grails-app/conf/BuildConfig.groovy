@@ -30,9 +30,7 @@ grails.project.dependency.resolution = {
     }
     dependencies {
 	      compile 'org.grails.plugins:events:1.0.0.BUILD-SNAPSHOT'
-        compile('org.atmosphere:atmosphere-runtime:2.0.0.RC3') {
-            excludes 'slf4j-api', 'atmosphere-ping'
-        }
+        compile 'org.atmosphere:atmosphere-runtime:2.0.1'
     }
 
     plugins {
