@@ -77,4 +77,10 @@ public class BridgeWSListener implements WebSocketEventListener, GrailsEventsAwa
 	public void onThrowable(AtmosphereResourceEvent event) {
 		//grailsEvents.event("onThrowable", event, SharedConstants.FROM_BROWSERS, null, null, null);
 	}
+
+	@Override
+	public void onClose(AtmosphereResourceEvent event) {
+		grailsEvents.event("onClose", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+	}
+	
 }
