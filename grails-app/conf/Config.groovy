@@ -21,6 +21,7 @@ log4j = {
         development{
             debug 'org.atmosphere'
             debug 'org.grails'
+            trace 'org.atmosphere.websocket.WebSocketEventListenerAdapter'
         }
     }
 

@@ -38,7 +38,8 @@ class TestService {
 	def sampleBro(test) {
 		def ts=new TestDomain(name:'test')
 
-		ts.save() //This will trigger the GORM event 'afterInsert' where we have allowed for client listeners in TestEvents.groovy.
+		//ts.save() //This will trigger the GORM event 'afterInsert' where we have allowed for client listeners in
+			//	TestEvents.groovy.
 		//any browsers using grailsEvents.on('afterInsert', function(data){...}); will receive a JSON from TestDomain
 	}
 

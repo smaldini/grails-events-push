@@ -34,6 +34,8 @@ import org.springframework.context.ApplicationContext;
 import reactor.event.Event;
 import reactor.event.selector.Selector;
 import reactor.event.selector.Selectors;
+import reactor.function.Consumer;
+import reactor.function.support.CancelConsumerException;
 import reactor.groovy.config.ReactorBuilder;
 
 import javax.servlet.ServletException;
@@ -66,12 +68,10 @@ public class EventsPushHandler extends HttpServlet {
 	private BroadcasterFactory broadcasterFactory;
 
 	public static final String CONFIG_BRIDGE       = "grails.events.push.listener.bridge";
-	public static final String TOPICS_HEADER       = "topics";
-	public static final String GLOBAL_TOPIC        = "eventsbus";
 	public static final String CLIENT_FILTER_PARAM = "browserFilter";
 	public static final String PUSH_BODY           = "body";
 	public static final String PUSH_TOPIC          = "topic";
-	public static final String DELIMITER           = "<@>";
+	public static final String DELIMITER           = "|";
 
 	private AtmosphereResourceEventListener bridgeListener = null;
 
@@ -99,55 +99,7 @@ public class EventsPushHandler extends HttpServlet {
 		}
 
 		if (grailsEvents != null) {
-
-			Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC, true);
-			if (b.getBroadcasterConfig().getBroadcasterCache() == null) {
-				b.getBroadcasterConfig().setBroadcasterCache(new UUIDBroadcasterCache());
-			}
-			b.getBroadcasterConfig().addFilter(new PerRequestBroadcastFilter() {
-				public BroadcastAction filter(AtmosphereResource atmosphereResource, Object originalMessage, Object message) {
-					BroadcastSignal signal;
-
-					String pass = null;
-
-					if (BroadcastSignal.class.isAssignableFrom(message.getClass())) {
-						signal = (BroadcastSignal) message;
-
-						if (atmosphereResource.getRequest().getHeader(TOPICS_HEADER) != null) {
-							String[] topics = atmosphereResource.getRequest().getHeader(TOPICS_HEADER).split(",");
-							for (String topic : topics) {
-								if (signal.selector.matches(topic)) {
-									pass = topic;
-									break;
-								}
-							}
-						}
-
-						if (signal.broadcastClientFilter != null && !(Boolean) signal.broadcastClientFilter.call(
-								signal.eventMessageType ? signal.eventMessage : signal.eventMessage.getData(),
-								atmosphereResource.getRequest()
-						)) {
-							pass = null;
-						}
-
-						if (null != pass) {
-							return new BroadcastAction(jsonify(signal.eventMessage, pass));
-						} else {
-							return new BroadcastAction(BroadcastAction.ACTION.ABORT, null);
-						}
-					}
-
-					return new BroadcastAction(message);
-				}
-
-				public BroadcastAction filter(Object originalMessage, Object message) {
-					return new BroadcastAction(message);
-				}
-			});
-
 			defineBridgeListener(grailsApplication, grailsEvents);
-			registerTopics(grailsEvents);
-
 			//b.scheduleFixedBroadcast(2 + DELIMITER + "{}", 10, TimeUnit.SECONDS);
 		}
 
@@ -185,12 +137,11 @@ public class EventsPushHandler extends HttpServlet {
 	}
 
 	@SuppressWarnings("unchecked")
-	static public void registerTopics(EventsApi grailsEvents) {
+	protected void registerTopics(Object topic, final AtmosphereResource resource) {
 		Collection<ReactorBuilder> pushBuilders =
 				grailsEvents.getGroovyEnvironment().reactorBuildersByExtension(EventsPushScopes.TO_BROWSERS);
 
 		Closure broadcastClientFilter;
-		Broadcaster b = BroadcasterFactory.getDefault().lookup(GLOBAL_TOPIC);
 		Object cursor;
 		Selector selector;
 		Object key;
@@ -225,7 +176,21 @@ public class EventsPushHandler extends HttpServlet {
 							(Selector) key :
 							Selectors.$(key);
 
-					pushBuilder.get().on(selector, new BroadcastEventConsumer(selector, b, broadcastClientFilter));
+					if (selector.matches(topic)) {
+						final Closure<Boolean> _broadcastClientFilter = broadcastClientFilter;
+						pushBuilder.get().on(Selectors.$(topic), new Consumer<Event<?>>() {
+							@Override
+							public void accept(Event<?> event) {
+								if (resource.isCancelled() || resource.isResumed()) {
+									throw new CancelConsumerException();
+								}
+								if (_broadcastClientFilter == null || _broadcastClientFilter.call(event,
+										resource.getRequest())) {
+									resource.getBroadcaster().broadcast(jsonify(event, event.getKey()));
+								}
+							}
+						});
+					}
 
 				}
 			}
@@ -242,57 +207,25 @@ public class EventsPushHandler extends HttpServlet {
 
 	@Override
 	public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-		Broadcaster defaultBroadcaster = broadcasterFactory.lookup(GLOBAL_TOPIC);
-		if (defaultBroadcaster == null) {
-			res.sendError(403);
-			return;
+		Meteor m = Meteor.build(req, Broadcaster.SCOPE.REQUEST, null, null);
+
+		if (m.getBroadcaster().getBroadcasterConfig().getBroadcasterCache() == null) {
+			m.getBroadcaster().getBroadcasterConfig().setBroadcasterCache(new UUIDBroadcasterCache());
 		}
-
-		String header = req.getHeader(HeaderConfig.X_ATMOSPHERE_TRANSPORT);
-		String _topics = req.getHeader(TOPICS_HEADER);
-		if (_topics == null)
-			return;
-
-		// Create a Meteor
-		Meteor m = Meteor.build(req);
 
 		// Log all events on the console, including WebSocket events.
-		if (log.isDebugEnabled()) {
-			if (m.transport().equals(AtmosphereResource.TRANSPORT.WEBSOCKET))
-				m.addListener(new WebSocketEventListenerAdapter());
-			else
-				m.addListener(new AtmosphereResourceEventListenerAdapter());
-		}
-
 		if (bridgeListener != null)
 			m.addListener(bridgeListener);
 
-		m.setBroadcaster(defaultBroadcaster);
-
-		if (header != null && header.equalsIgnoreCase(HeaderConfig.LONG_POLLING_TRANSPORT)) {
-			req.setAttribute(ApplicationConfig.RESUME_ON_BROADCAST, Boolean.TRUE);
-		}
-
-		m.suspend(-1);
+		m.resumeOnBroadcast(m.transport() == AtmosphereResource.TRANSPORT.LONG_POLLING).suspend(-1);
 
 	}
 
-//    private void lookupTopic(String topic, Meteor m) {
-//        Broadcaster b = broadcasterFactory.lookup(topic);
-//        if (b != null) {
-//            b.addAtmosphereResource(m.getAtmosphereResource());
-//        } else {
-//            Map.Entry<String, EventDefinition> whitelistedTopid = matchesWhitelist(topic);
-//            if (whitelistedTopid != null) {
-//                broadcasterFactory.lookup(topic, true).addAtmosphereResource(m.getAtmosphereResource());
-//            }
-//        }
-//    }
-
-	public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+	public void doPost(final HttpServletRequest req, final HttpServletResponse res) throws IOException {
 		Map element = (Map) new JsonSlurper().parse(new InputStreamReader(req.getInputStream()));
+		req.getInputStream().close();
 
-		String topic = element.containsKey(PUSH_TOPIC) ? element.get(PUSH_TOPIC).toString() : null;
+		final String topic = element.containsKey(PUSH_TOPIC) ? element.get(PUSH_TOPIC).toString() : null;
 		if (topic == null) {
 			return;
 		}
@@ -300,13 +233,22 @@ public class EventsPushHandler extends HttpServlet {
 		if (element.containsKey(PUSH_BODY)) {
 			grailsEvents.event(topic, element.get(PUSH_BODY), EventsPushScopes.FROM_BROWSERS, null, null, null);
 		} else {
-			grailsEvents.event(topic, element.get(PUSH_BODY), EventsPushScopes.FROM_BROWSERS, null, null, null);
+			boolean breakingBad = false;
+			AtmosphereResource targetResource = null;
+			for (Broadcaster broadcaster : broadcasterFactory.lookupAll()) {
+				for (AtmosphereResource resource : broadcaster.getAtmosphereResources()) {
+					if (resource.uuid().equalsIgnoreCase(((AtmosphereRequest) req).resource().uuid())) {
+						targetResource = resource;
+						breakingBad = true;
+						break;
+					}
+				}
+				if (breakingBad) {
+					break;
+				}
+			}
+			if (targetResource != null)
+				registerTopics(topic, targetResource);
 		}
 	}
-
-//    private String extractTopic(String pathInfo) {
-//        String[] decodedPath = pathInfo.split("/");
-//        return decodedPath[decodedPath.length - 1];
-//    }
-
 }

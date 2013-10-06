@@ -18,10 +18,10 @@ grails.project.dependency.resolution = {
 
 	log "warn" // log level of Ivy resolver, either 'error', 'warn', 'info', 'debug' or 'verbose'
 	repositories {
-        //mavenLocal()
+        mavenLocal()
       	mavenRepo "http://repo.springsource.org/libs-milestone"
 				mavenRepo "http://repo.springsource.org/libs-snapshot"
-        mavenRepo "http://repo.grails.org/grails/libs-snapshots-local/"
+        //mavenRepo "http://repo.grails.org/grails/libs-snapshots-local/"
         mavenRepo "https://oss.sonatype.org/content/repositories/snapshots"
 				grailsCentral()
 				mavenCentral()

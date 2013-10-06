@@ -32,6 +32,7 @@ var grails = grails || {};
             that.globalTopicName = hasOptions && options.globalTopicName && (typeof options.globalTopicName == "string") ? options.globalTopicName : "eventsbus";
             that.path = hasOptions && options.path && (typeof options.path == "string") ? option.path : "g-eventsbus";
 
+            var loadingRequest = {};
             var state = grails.Events.CONNECTING;
             that.onopen = null;
             that.onglobalmessage = null;
@@ -40,61 +41,73 @@ var grails = grails || {};
 
             var localId = "";
 
-            that.send = function (topic, message) {
+            that.send = function (topic, message, raw) {
                 checkSpecified("topic", 'string', topic);
                 //checkSpecified("message", 'object', message);
                 //checkOpen();
                 var envelope = {
-                    topic:topic,
-                    body:message
+                    topic: topic,
+                    body: message
                 };
-                that.globalTopicSocket.push({data:jQuery.stringifyJSON(envelope)});
+                that.globalTopicSocket.push(raw ? message : {data: jQuery.stringifyJSON(envelope)});
             };
 
             that.on = function (topic, handler, request) {
                 checkSpecified("topic", 'string', topic);
                 checkSpecified("handler", 'function', handler);
 
+                var subscribe = jQuery.isEmptyObject(handlerMap) || !jQuery.isEmptyObject(request);
                 var handlers = handlerMap[topic];
-                if (!handlers || request) {
-
-                    handlers = [handler];
-                    handlerMap[topic] = handlers;
-
+                if (handlers) {
+                    handlers[handlers.length] = handler;
+                } else {
+                    handlerMap[topic] = [handler];
+                }
+                if (subscribe) {
                     var topics = "";
                     for (var _topic in handlerMap) {
                         topics += _topic + ',';
                     }
-                    if (topics[topics.length - 1] == ',') {
-                        topics = topics.substr(0, topics.length - 1);
-                    }
                     //request.shared = true;
                     var rq = {
-                        messageDelimiter:'<@>',
-                        trackMessageLength : true,
-                        headers:{'topics':topics},
-                        url:that.root + '/' + that.path + '/' + that.globalTopicName,
-                        transport:"websocket",
+                        trackMessageLength: true,
+                        url: that.root + '/' + that.path + '/' + that.globalTopicName,
+                        transport: "websocket",
+                        contentType: "application/json",
                         fallbackTransport: "streaming",
-                        reconnectInterval:4000
+                        reconnectInterval: 4000
                     };
 
-                    if(!!window.EventSource){
-                       rq.fallbackTransport = 'sse';
+                    if (!!window.ArrayBuffer){
+                        rq.binaryType = "arraybuffer"
                     }
 
+                    if (!!window.EventSource) {
+                        rq.fallbackTransport = 'sse';
+                    }
 
                     // Allow the user to extend/override the request
                     rq = jQuery.extend(true, rq, options);
                     rq = jQuery.extend(true, rq, request);
 
-                    if (that.globalTopicSocket) {
-                        socket.unsubscribe();
-                    }
+                    rq.onOpen = function (response) {
+                        rq.onOpen = null;
+                        for(var val in handlerMap){
+                            console.log("defer connecting topic: " + val);
+                            that.globalTopicSocket.push({data: jQuery.stringifyJSON({topic: val})});
+                        }
+                        loadingRequest = null;
+                    };
+                    loadingRequest = rq;
                     that.globalTopicSocket = socket.subscribe(rq);
                 } else {
-                    handlers[handlers.length] = handler;
+                    if(loadingRequest == null){
+                        console.log("connecting topic: " + topic);
+                        that.globalTopicSocket.push({data: jQuery.stringifyJSON({topic: topic})});
+                    }
                 }
+
+
                 return handler;
             };
 

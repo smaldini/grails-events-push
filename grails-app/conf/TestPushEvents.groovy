@@ -1,5 +1,4 @@
 import org.grails.plugin.platform.events.push.EventsPushScopes
-import org.groovy.grails.platform.push.TestDomain
 import static reactor.event.selector.Selectors.*
 
 includes = ['push']
