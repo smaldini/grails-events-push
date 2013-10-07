@@ -21,14 +21,14 @@ grails.project.dependency.resolution = {
         mavenLocal()
       	mavenRepo "http://repo.springsource.org/libs-milestone"
 				mavenRepo "http://repo.springsource.org/libs-snapshot"
-        //mavenRepo "http://repo.grails.org/grails/libs-snapshots-local/"
+        mavenRepo "http://repo.grails.org/grails/libs-snapshots-local/"
         mavenRepo "https://oss.sonatype.org/content/repositories/snapshots"
 				grailsCentral()
 				mavenCentral()
     }
     dependencies {
 	      compile 'org.grails.plugins:events:1.0.0.BUILD-SNAPSHOT'
-        compile 'org.atmosphere:atmosphere-runtime:2.0.1'
+        compile 'org.atmosphere:atmosphere-runtime:2.0.2'
     }
 
     plugins {
