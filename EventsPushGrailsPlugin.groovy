@@ -17,6 +17,7 @@
  */
 import org.grails.plugin.platform.events.push.EventsPushHandler
 import org.grails.plugin.platform.events.push.GrailsMeteorServlet
+import org.grails.plugin.platform.events.push.GrailsWebsocketProtocol
 import org.grails.plugins.events.reactor.configuration.EventsArtefactHandler
 import org.springframework.util.ClassUtils
 
@@ -109,6 +110,18 @@ the server to the browser.
 					'init-param' {
 						'param-name'('org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads')
 						'param-value'(20)
+					}
+
+				if (!config?.servlet?.initParams?."org.atmosphere.websocket.WebSocketProtocol")
+					'init-param' {
+						'param-name'('org.atmosphere.websocket.WebSocketProtocol')
+						'param-value'(GrailsWebsocketProtocol.name)
+					}
+
+				if (!config?.servlet?.initParams?."org.atmosphere.websocket.binaryWrite")
+					'init-param' {
+						'param-name'('org.atmosphere.websocket.binaryWrite')
+						'param-value'(true)
 					}
 
 				'load-on-startup'('0')

@@ -31,6 +31,7 @@ var grails = grails || {};
 
             that.globalTopicName = hasOptions && options.globalTopicName && (typeof options.globalTopicName == "string") ? options.globalTopicName : "eventsbus";
             that.path = hasOptions && options.path && (typeof options.path == "string") ? option.path : "g-eventsbus";
+            that.binary = hasOptions && options.binary && (typeof options.binary == "boolean") ? options.binary : false;
 
             var loadingRequest = {};
             var state = grails.Events.CONNECTING;
@@ -41,15 +42,25 @@ var grails = grails || {};
 
             var localId = "";
 
-            that.send = function (topic, message, raw) {
+            that.send = function (topic, message) {
                 checkSpecified("topic", 'string', topic);
                 //checkSpecified("message", 'object', message);
                 //checkOpen();
-                var envelope = {
-                    topic: topic,
-                    body: message
-                };
-                that.globalTopicSocket.push(raw ? message : {data: jQuery.stringifyJSON(envelope)});
+                var envelope = null
+                if (that.binary && message instanceof ArrayBuffer || message instanceof Blob) {
+                    envelope = appendBuffer(stringToUint8(topic + '\n' + '2' + '\n'), message);
+                    that.globalTopicSocket.push(envelope);
+                } else {
+                    envelope = topic + '\n' + (typeof (message) === 'object' ?
+                        '1' + '\n' + jQuery.stringifyJSON(message) :
+                        '0' + '\n' + message)
+                    if (!that.binary) {
+                        that.globalTopicSocket.push({data: envelope});
+                    } else {
+                        that.globalTopicSocket.push(stringToUint8(envelope).buffer);
+                    }
+                }
+
             };
 
             that.on = function (topic, handler, request) {
@@ -70,7 +81,6 @@ var grails = grails || {};
                     }
                     //request.shared = true;
                     var rq = {
-                        trackMessageLength: true,
                         url: that.root + '/' + that.path + '/' + that.globalTopicName,
                         transport: "websocket",
                         contentType: "application/json",
@@ -78,8 +88,8 @@ var grails = grails || {};
                         reconnectInterval: 4000
                     };
 
-                    if (!!window.ArrayBuffer){
-                        rq.binaryType = "arraybuffer"
+                    if (that.binary && !!window.ArrayBuffer) {
+                        rq.webSocketBinaryType = "arraybuffer"
                     }
 
                     if (!!window.EventSource) {
@@ -92,18 +102,18 @@ var grails = grails || {};
 
                     rq.onOpen = function (response) {
                         rq.onOpen = null;
-                        for(var val in handlerMap){
+                        for (var val in handlerMap) {
                             console.log("defer connecting topic: " + val);
-                            that.globalTopicSocket.push({data: jQuery.stringifyJSON({topic: val})});
+                            _registerRequest(val);
                         }
                         loadingRequest = null;
                     };
                     loadingRequest = rq;
                     that.globalTopicSocket = socket.subscribe(rq);
                 } else {
-                    if(loadingRequest == null){
+                    if (loadingRequest == null) {
                         console.log("connecting topic: " + topic);
-                        that.globalTopicSocket.push({data: jQuery.stringifyJSON({topic: topic})});
+                        _registerRequest(topic);
                     }
                 }
 
@@ -141,6 +151,14 @@ var grails = grails || {};
                 return state;
             };
 
+            function _registerRequest(topic) {
+                if (!that.binary) {
+                    that.globalTopicSocket.push(topic + '\n' + "4");
+                } else {
+                    that.globalTopicSocket.push(stringToUint8(topic + '\n' + "4").buffer);
+                }
+            }
+
             function init() {
                 var connecting = function () {
                     state = grails.Events.OPEN;
@@ -150,7 +168,12 @@ var grails = grails || {};
                 };
 
                 socket.onOpen = connecting;
-                socket.onReconnect = connecting;
+                socket.onReconnect = function (request) {
+                    request.headers = {
+                        topics: Object.keys(handlerMap)
+                    }
+                    connecting();
+                }
 
                 socket.onClose = function (e) {
                     state = grails.Events.CLOSED;
@@ -159,26 +182,83 @@ var grails = grails || {};
                     }
                 };
 
+                var buffer;
+
                 socket.onMessage = function (response) {
                     if (response.status == 200) {
-                        var data;
-                        if (response.responseBody.length > 0) {
-                            try {
-                                data = jQuery.parseJSON(response.responseBody);
-                            } catch (e) {
-                                if (console != 'undefined') {
-                                    console.log('discarded message: ' + response.responseBody);
+                        var topic, type, data, envelope;
+                        try {
+                            if (response.responseBody instanceof ArrayBuffer) {
+                                var dataUint = new Uint8Array(response.responseBody);
+                                if (dataUint.length > 0 && (dataUint.length != 3 || "E".charCodeAt(0) != dataUint[0])
+                                    && "N".charCodeAt(0) != dataUint[1] && "D".charCodeAt(0) != dataUint[1]) {
+                                    if (buffer == null) {
+                                        buffer = response.responseBody;
+                                    } else {
+                                        var tmp = new Uint8Array(dataUint.length + buffer.byteLength);
+                                        tmp.set(new Uint8Array(buffer), 0);
+                                        tmp.set(dataUint, buffer.byteLength);
+                                        buffer = tmp.buffer;
+                                    }
+                                    return;
                                 }
+
+                                if (!buffer || buffer.byteLength == 0) {
+                                    buffer = null;
+                                    return;
+                                }
+
+                                var bytes = new Uint8Array(buffer);
+                                var tmp = "";
+                                for (var i = 0; i < bytes.length; i++) {
+                                    if (bytes[i] == "\n".charCodeAt(0)) {
+                                        if (tmp.length > 0) {
+                                            if (!topic) {
+                                                topic = tmp;
+                                                tmp = "";
+                                            } else if (!type) {
+                                                type = tmp;
+                                                data = bytes.buffer.slice(i + 1);
+                                                break;
+                                            }
+                                        }
+                                    } else {
+                                        tmp += String.fromCharCode(bytes[i]);
+                                    }
+                                }
+                                buffer = null;
+
+                            } else if (response.responseBody.length > 0) {
+                                var _data = response.responseBody.split('\n')
+                                topic = _data[0];
+                                type = _data[1];
+                                data = _data[2];
+                            }
+                        } catch (e) {
+                            if (console != 'undefined') {
+                                console.log(e.stack);
+                                console.log('discarded message: ' + response.responseBody);
+                                buffer = null;
+                            }
+                            return;
+                        }
+                        var handlers = handlerMap[topic ? topic : that.globalTopicName];
+                        if (handlers) {
+                            if (type == '5') {
+                                that.unregisterHandlers(topic);
                                 return;
                             }
-                            var handlers = handlerMap[data && data.topic ? data.topic : that.globalTopicName];
-                            if (handlers) {
-                                // We make a copy since the handler might get unregistered from within the
-                                // handler itself, which would screw up our iteration
-                                var copy = handlers.slice(0);
-                                for (var i = 0; i < copy.length; i++) {
-                                    copy[i](data.body, data, response);
-                                }
+                            // We make a copy since the handler might get unregistered from within the
+                            // handler itself, which would screw up our iteration
+                            var copy = handlers.slice(0);
+                            if (type == '0' || type == '2') {
+                                envelope = data;
+                            } else if (type == '1') {
+                                envelope = jQuery.parseJSON(data instanceof ArrayBuffer ?
+                                    String.fromCharCode.apply(null, new Uint8Array(data)) : data);
+                            }
+                            for (var i = 0; i < copy.length; i++) {
+                                copy[i](envelope, topic, response, type);
                             }
                         }
                     }
@@ -195,6 +275,22 @@ var grails = grails || {};
                 if (state != grails.Events.OPEN) {
                     throw new Error('INVALID_STATE_ERR');
                 }
+            }
+
+            function stringToUint8(str) {
+                str = str + '\n';
+                var uint = new Uint8Array(str.length);
+                for (var i = 0, j = str.length; i < j; ++i) {
+                    uint[i] = str.charCodeAt(i);
+                }
+                return uint;
+            }
+
+            function appendBuffer(uint, buffer) {
+                var tmp = new Uint8Array(uint.length + buffer.byteLength);
+                tmp.set(uint, 0);
+                tmp.set(new Uint8Array(buffer), uint.length);
+                return tmp.buffer;
             }
 
             function checkSpecified(paramName, paramType, param, optional) {

@@ -1158,6 +1158,7 @@ jQuery.atmosphere = function () {
                         _response.responseBody = message;
                         _invokeCallback();
                         _response.responseBody = null;
+
                     }
                 };
 
@@ -1255,6 +1256,9 @@ jQuery.atmosphere = function () {
                 // The first messages is always the uuid.
                 var b = true;
                 if (jQuery.trim(message).length !== 0 && request.enableProtocol && request.firstMessage) {
+                    if(message instanceof ArrayBuffer){
+                        message = String.fromCharCode.apply(null, new Uint8Array(message));
+                    }
                     request.firstMessage = false;
                     var messages = message.split(request.messageDelimiter);
                     var pos = messages.length === 2 ? 0 : 1;

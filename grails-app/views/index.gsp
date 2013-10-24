@@ -9,7 +9,7 @@
        Register a grailsEvents handler for this window, constructor can take a root URL,
        a path to event-bus servlet and options. There are sensible defaults for each argument
        */
-      window.grailsEvents = new grails.Events("${createLink(uri: '')}", {logLevel:"debug", transport:'sse'});
+      window.grailsEvents = new grails.Events("${createLink(uri: '')}", {logLevel:"debug", binary:true, transport:'websocket'});
 
        window.grailsEvents.on("afterInsert", function (data) {
           $("#messages").append("<div>" + $.stringifyJSON(data) + "</div>");
@@ -46,11 +46,7 @@
             for (var i = 0; i < byteString.length; i++) {
                 ia[i] = byteString.charCodeAt(i);
             }
-            if (!window.BlobBuilder && window.WebKitBlobBuilder){
-                window.BlobBuilder = window.WebKitBlobBuilder;
-            }
-            // write the ArrayBuffer to a blob, and you're done
-            return new Blob([ab], {type: mimeString});
+            return ab;
         }
 
       function connect() {
@@ -71,17 +67,23 @@
             navigator.webkitGetUserMedia ||
             navigator.mozGetUserMedia ||
             navigator.msGetUserMedia;
+        if (!window.BlobBuilder && window.WebKitBlobBuilder){
+                window.BlobBuilder = window.WebKitBlobBuilder;
+            }
 
       $('#anotherReceive').change(function (event) {
         if($(this).attr('checked')){
             var target = document.getElementById("target");
             grailsEvents.on($('#topic').val(), function (_stream) {
-              var url= URL.createObjectURL(dataURItoBlob(_stream));
-              target.onload = function() {
-                 URL.revokeObjectURL(url);
-              };
-              target.src = url;
+                if(_stream instanceof ArrayBuffer){
+                  var url= URL.createObjectURL(new Blob( [_stream], {type : "image/jpeg"}));
+                  target.onload = function() {
+                     URL.revokeObjectURL(url);
+                  };
+                  target.src = url;
+                }
             }, {});
+
         }
       });
 
@@ -120,7 +122,8 @@
                 function () {
                     ctx.drawImage(video, 0, 0, 320, 240);
                     var data = canvas.get()[0].toDataURL('image/jpeg', 1.0);
-                    grailsEvents.send($('#to').val(), data);
+                    var newblob = dataURItoBlob(data);
+                    grailsEvents.send($('#to').val(), newblob);
             }, 250);
 
       });
@@ -194,9 +197,9 @@
     <input id='phrase' type='text'/>
     <input id='send_message' class='button' type='submit' name='Publish' value='Publish Message'/>
 
-    <p>Another stupid sample : <input id='another' class='button' type='checkbox' />
-    <p>Receive : <input id='anotherReceive' class='button' type='checkbox' />
-       Broadcast To : <input id='to' type='text' value='sampleBro-1'/></p>
+    <p>Another stupid sample : <input id='another' class='button' type='checkbox'/>
+    <p>Receive : <input id='anotherReceive' class='button' type='checkbox'/>
+        Broadcast To : <input id='to' type='text' value='sampleBro-1'/></p>
 </div>
 <br/>
 
@@ -208,7 +211,7 @@
     <img id="target" style="display: inline;"/>
 
     <div style='visibility:hidden;width:0; height:0;'><canvas width="320" id="canvas" height="240"
-                                                              style="display: inline;"></canvas>
+                style="display: inline;"></canvas>
     </div>
 </div>
 
