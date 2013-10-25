@@ -48,7 +48,7 @@ var grails = grails || {};
                 //checkOpen();
                 var envelope = null
                 if (that.binary && (message instanceof ArrayBuffer || message instanceof Blob)) {
-                    envelope = appendBuffer(stringToUint8(topic + '|' + '2' + '|'), message);
+                    envelope = appendBuffer(stringToUint8(topic + '|' + '2'), message);
                     that.globalTopicSocket.push(envelope);
                 } else {
                     envelope = topic + '|' + (typeof (message) === 'object' ?
@@ -192,7 +192,7 @@ var grails = grails || {};
                             if (response.responseBody instanceof ArrayBuffer) {
                                 var dataUint = new Uint8Array(response.responseBody);
                                 if (dataUint.length > 0 && (dataUint.length != 3 || "E".charCodeAt(0) != dataUint[0])
-                                    && "N".charCodeAt(0) != dataUint[1] && "D".charCodeAt(0) != dataUint[1]) {
+                                    && "N".charCodeAt(0) != dataUint[1] && "D".charCodeAt(0) != dataUint[2]) {
                                     if (buffer == null) {
                                         buffer = response.responseBody;
                                     } else {

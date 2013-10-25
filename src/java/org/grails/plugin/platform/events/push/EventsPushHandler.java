@@ -226,7 +226,8 @@ public class EventsPushHandler extends HttpServlet {
 		if (data != null) {
 			if (InputStream.class.isAssignableFrom(data.getClass())) {
 				outputStream.write((res + TYPE_BINARY + "|").getBytes());
-				IOUtils.copy((InputStream)data, outputStream);
+				int out = IOUtils.copy((InputStream)data, outputStream);
+				System.out.println("out:"+out);
 				outputStream.write(DELIMITER);
 			} else {
 				if (String.class.isAssignableFrom(data.getClass())) {
