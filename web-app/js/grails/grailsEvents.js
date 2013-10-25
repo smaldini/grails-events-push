@@ -47,13 +47,13 @@ var grails = grails || {};
                 //checkSpecified("message", 'object', message);
                 //checkOpen();
                 var envelope = null
-                if (that.binary && message instanceof ArrayBuffer || message instanceof Blob) {
-                    envelope = appendBuffer(stringToUint8(topic + '\n' + '2' + '\n'), message);
+                if (that.binary && (message instanceof ArrayBuffer || message instanceof Blob)) {
+                    envelope = appendBuffer(stringToUint8(topic + '|' + '2' + '|'), message);
                     that.globalTopicSocket.push(envelope);
                 } else {
-                    envelope = topic + '\n' + (typeof (message) === 'object' ?
-                        '1' + '\n' + jQuery.stringifyJSON(message) :
-                        '0' + '\n' + message)
+                    envelope = topic + '|' + (typeof (message) === 'object' ?
+                        '1' + '|' + jQuery.stringifyJSON(message) :
+                        '0' + '|' + message)
                     if (!that.binary) {
                         that.globalTopicSocket.push({data: envelope});
                     } else {
@@ -99,6 +99,14 @@ var grails = grails || {};
                     // Allow the user to extend/override the request
                     rq = jQuery.extend(true, rq, options);
                     rq = jQuery.extend(true, rq, request);
+
+                    rq.onTransportFailure = function(e,r){
+                        rq.onOpen = null;
+                        r.headers = {
+                            topics: Object.keys(handlerMap)
+                        };
+                        that.binary = false;
+                    };
 
                     rq.onOpen = function (response) {
                         rq.onOpen = null;
@@ -153,9 +161,9 @@ var grails = grails || {};
 
             function _registerRequest(topic) {
                 if (!that.binary) {
-                    that.globalTopicSocket.push(topic + '\n' + "4");
+                    that.globalTopicSocket.push(topic + '|' + "4");
                 } else {
-                    that.globalTopicSocket.push(stringToUint8(topic + '\n' + "4").buffer);
+                    that.globalTopicSocket.push(stringToUint8(topic + '|' + "4").buffer);
                 }
             }
 
@@ -168,13 +176,6 @@ var grails = grails || {};
                 };
 
                 socket.onOpen = connecting;
-                socket.onReconnect = function (request) {
-                    request.headers = {
-                        topics: Object.keys(handlerMap)
-                    }
-                    connecting();
-                }
-
                 socket.onClose = function (e) {
                     state = grails.Events.CLOSED;
                     if (that.onclose) {
@@ -211,7 +212,7 @@ var grails = grails || {};
                                 var bytes = new Uint8Array(buffer);
                                 var tmp = "";
                                 for (var i = 0; i < bytes.length; i++) {
-                                    if (bytes[i] == "\n".charCodeAt(0)) {
+                                    if (bytes[i] == "|".charCodeAt(0)) {
                                         if (tmp.length > 0) {
                                             if (!topic) {
                                                 topic = tmp;
@@ -229,7 +230,7 @@ var grails = grails || {};
                                 buffer = null;
 
                             } else if (response.responseBody.length > 0) {
-                                var _data = response.responseBody.split('\n')
+                                var _data = response.responseBody.split('|')
                                 topic = _data[0];
                                 type = _data[1];
                                 data = _data[2];
@@ -278,7 +279,7 @@ var grails = grails || {};
             }
 
             function stringToUint8(str) {
-                str = str + '\n';
+                str = str + '|';
                 var uint = new Uint8Array(str.length);
                 for (var i = 0, j = str.length; i < j; ++i) {
                     uint[i] = str.charCodeAt(i);

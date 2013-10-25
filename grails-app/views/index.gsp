@@ -1,8 +1,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-    <r:require modules="jquery, grailsEvents"/>
-    <meta name='layout' content='main'/>
-    <r:script>
+<r:require modules="jquery, grailsEvents"/>
+<meta name='layout' content='main'/>
+<r:script>
     $(document).ready(function () {
 
       /*
@@ -33,8 +33,15 @@
       }
 
       function dataURItoBlob(dataURI) {
-            // convert base64 to raw binary data held in a string
-            // doesn't handle URLEncoded DataURIs
+            var uint = new Uint8Array(dataURI.length);
+            for (var i = 0, j = dataURI.length; i < j; ++i) {
+                uint[i] = dataURI.charCodeAt(i);
+            }
+            return uint.buffer;
+        }
+
+        function dataURIArrayBufferToArrayBuffer(dataURI) {
+            dataURI = String.fromCharCode.apply(null, new Uint8Array(dataURI));;
             var byteString = atob(dataURI.split(',')[1]);
 
             // separate out the mime component
@@ -46,7 +53,11 @@
             for (var i = 0; i < byteString.length; i++) {
                 ia[i] = byteString.charCodeAt(i);
             }
-            return ab;
+            if (!window.BlobBuilder && window.WebKitBlobBuilder){
+                window.BlobBuilder = window.WebKitBlobBuilder;
+            }
+            // write the ArrayBuffer to a blob, and you're done
+            return new Blob([ab], {type: mimeString});
         }
 
       function connect() {
@@ -76,7 +87,7 @@
             var target = document.getElementById("target");
             grailsEvents.on($('#topic').val(), function (_stream) {
                 if(_stream instanceof ArrayBuffer){
-                  var url= URL.createObjectURL(new Blob( [_stream], {type : "image/jpeg"}));
+                  var url= URL.createObjectURL(dataURIArrayBufferToArrayBuffer(_stream));
                   target.onload = function() {
                      URL.revokeObjectURL(url);
                   };
@@ -178,7 +189,7 @@
 
       $('#topic').focus();
     });
-    </r:script>
+</r:script>
 </head>
 
 <body>
@@ -198,6 +209,7 @@
     <input id='send_message' class='button' type='submit' name='Publish' value='Publish Message'/>
 
     <p>Another stupid sample : <input id='another' class='button' type='checkbox'/>
+
     <p>Receive : <input id='anotherReceive' class='button' type='checkbox'/>
         Broadcast To : <input id='to' type='text' value='sampleBro-1'/></p>
 </div>
@@ -211,7 +223,7 @@
     <img id="target" style="display: inline;"/>
 
     <div style='visibility:hidden;width:0; height:0;'><canvas width="320" id="canvas" height="240"
-                style="display: inline;"></canvas>
+                                                              style="display: inline;"></canvas>
     </div>
 </div>
 
