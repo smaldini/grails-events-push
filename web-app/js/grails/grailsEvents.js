@@ -46,7 +46,7 @@ var grails = grails || {};
                 checkSpecified("topic", 'string', topic);
                 //checkSpecified("message", 'object', message);
                 //checkOpen();
-                var envelope = null
+                var envelope;
                 if (that.binary && (message instanceof ArrayBuffer || message instanceof Blob)) {
                     envelope = appendBuffer(stringToUint8(topic + '|' + '2'), message);
                     that.globalTopicSocket.push(envelope);
@@ -60,7 +60,7 @@ var grails = grails || {};
                         that.globalTopicSocket.push(stringToUint8(envelope).buffer);
                     }
                 }
-
+                return envelope;
             };
 
             that.on = function (topic, handler, request) {
@@ -100,7 +100,7 @@ var grails = grails || {};
                     rq = jQuery.extend(true, rq, options);
                     rq = jQuery.extend(true, rq, request);
 
-                    rq.onTransportFailure = function(e,r){
+                    rq.onTransportFailure = function (e, r) {
                         rq.onOpen = null;
                         r.headers = {
                             topics: Object.keys(handlerMap)
@@ -191,8 +191,12 @@ var grails = grails || {};
                         try {
                             if (response.responseBody instanceof ArrayBuffer) {
                                 var dataUint = new Uint8Array(response.responseBody);
-                                if (dataUint.length > 0 && (dataUint.length != 3 || "E".charCodeAt(0) != dataUint[0])
-                                    && "N".charCodeAt(0) != dataUint[1] && "D".charCodeAt(0) != dataUint[2]) {
+                                var endPacket = dataUint.length >= 3  &&
+                                    "E".charCodeAt(0) == dataUint[dataUint.length - 3] &&
+                                    "N".charCodeAt(0) == dataUint[dataUint.length - 2] &&
+                                    "D".charCodeAt(0) == dataUint[dataUint.length - 1];
+
+                                if (dataUint.length > 0 && !endPacket) {
                                     if (buffer == null) {
                                         buffer = response.responseBody;
                                     } else {
@@ -201,6 +205,9 @@ var grails = grails || {};
                                         tmp.set(dataUint, buffer.byteLength);
                                         buffer = tmp.buffer;
                                     }
+                                }
+
+                                if (!endPacket) {
                                     return;
                                 }
 

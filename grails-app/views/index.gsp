@@ -1,8 +1,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-<r:require modules="jquery, grailsEvents"/>
-<meta name='layout' content='main'/>
-<r:script>
+    <r:require modules="jquery, grailsEvents"/>
+    <meta name='layout' content='main'/>
+    <r:script>
     $(document).ready(function () {
 
       /*
@@ -32,7 +32,7 @@
         return ev.keyCode;
       }
 
-      function dataURItoBlob(dataURI) {
+      function dataURItoArrayBuffer(dataURI) {
             var uint = new Uint8Array(dataURI.length);
             for (var i = 0, j = dataURI.length; i < j; ++i) {
                 uint[i] = dataURI.charCodeAt(i);
@@ -41,7 +41,7 @@
         }
 
         function dataURIArrayBufferToArrayBuffer(dataURI) {
-            dataURI = String.fromCharCode.apply(null, new Uint8Array(dataURI));;
+            dataURI = String.fromCharCode.apply(null, new Uint8Array(dataURI));
             var byteString = atob(dataURI.split(',')[1]);
 
             // separate out the mime component
@@ -81,17 +81,31 @@
         if (!window.BlobBuilder && window.WebKitBlobBuilder){
                 window.BlobBuilder = window.WebKitBlobBuilder;
             }
+        var startTime = 0;
+
+
+         var canvas = $("#canvas");
+         var ctx = canvas.get()[0].getContext('2d');
+         var canvas2 = $("#canvas2");
+         var ctx2 = canvas2.get()[0].getContext('2d');
+
 
       $('#anotherReceive').change(function (event) {
-        if($(this).attr('checked')){
+          if($(this).attr('checked')){
             var target = document.getElementById("target");
             grailsEvents.on($('#topic').val(), function (_stream) {
                 if(_stream instanceof ArrayBuffer){
-                  var url= URL.createObjectURL(dataURIArrayBufferToArrayBuffer(_stream));
-                  target.onload = function() {
-                     URL.revokeObjectURL(url);
-                  };
-                  target.src = url;
+                    var img = new Image();
+                    img.onload = function () {
+                        ctx2.drawImage(this, 0, 0, 320, 240);
+                    };
+                    img.src = String.fromCharCode.apply(null, new Uint8Array(_stream));
+
+                  var elapsed = new Date().getTime()-startTime;
+                  console.log("process time:"+elapsed);
+
+                }else{
+                  target.src = _stream;
                 }
             }, {});
 
@@ -116,12 +130,6 @@
            console.log('Reeeejected!', e);
          };
 
-         var canvas = $("#canvas");
-         var ctx = canvas.get()[0].getContext('2d');
-
-       // Not showing vendor prefixes.
-
-
           if (navigator.getUserMedia) {
             navigator.getUserMedia({video: true}, function(stream) {
                 window.localMediaStream = stream;
@@ -131,10 +139,11 @@
 
            window.videoTimer = setInterval(
                 function () {
+                    startTime = new Date().getTime();
                     ctx.drawImage(video, 0, 0, 320, 240);
                     var data = canvas.get()[0].toDataURL('image/jpeg', 1.0);
-                    var newblob = dataURItoBlob(data);
-                    grailsEvents.send($('#to').val(), newblob);
+                    var ab = dataURItoArrayBuffer(data);
+                    grailsEvents.send($('#to').val(), ab);
             }, 250);
 
       });
@@ -189,7 +198,7 @@
 
       $('#topic').focus();
     });
-</r:script>
+    </r:script>
 </head>
 
 <body>
@@ -221,6 +230,8 @@
 <div>
     <video id="live" width="320" height="240" autoplay></video>
     <img id="target" style="display: inline;"/>
+    <canvas width="320" id="canvas2" height="240"
+            style="display: inline;" />
 
     <div style='visibility:hidden;width:0; height:0;'><canvas width="320" id="canvas" height="240"
                                                               style="display: inline;"></canvas>
