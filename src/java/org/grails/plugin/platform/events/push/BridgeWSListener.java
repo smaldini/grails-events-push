@@ -20,32 +20,32 @@ public class BridgeWSListener implements WebSocketEventListener, GrailsEventsAwa
 
 	@Override
 	public void onHandshake(WebSocketEvent event) {
-		grailsEvents.event("onHandshake", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		grailsEvents.event("onHandshake", event, EventsPushConstants.FROM_BROWSERS, null, null, null);
 	}
 
 	@Override
 	public void onMessage(WebSocketEvent event) {
-		grailsEvents.event("onMessage", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		grailsEvents.event("onMessage", event, EventsPushConstants.FROM_BROWSERS, null, null, null);
 	}
 
 	@Override
 	public void onClose(WebSocketEvent event) {
-		grailsEvents.event("onClose", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		grailsEvents.event("onClose", event, EventsPushConstants.FROM_BROWSERS, null, null, null);
 	}
 
 	@Override
 	public void onControl(WebSocketEvent event) {
-		grailsEvents.event("onControl", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		grailsEvents.event("onControl", event, EventsPushConstants.FROM_BROWSERS, null, null, null);
 	}
 
 	@Override
 	public void onDisconnect(WebSocketEvent event) {
-		grailsEvents.event("onDisconnect", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		grailsEvents.event("onDisconnect", event, EventsPushConstants.FROM_BROWSERS, null, null, null);
 	}
 
 	@Override
 	public void onConnect(WebSocketEvent event) {
-		grailsEvents.event("onConnect", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		grailsEvents.event("onConnect", event, EventsPushConstants.FROM_BROWSERS, null, null, null);
 	}
 
 	@Override
@@ -55,7 +55,7 @@ public class BridgeWSListener implements WebSocketEventListener, GrailsEventsAwa
 
 	@Override
 	public void onSuspend(AtmosphereResourceEvent event) {
-		grailsEvents.event("onConnect", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		grailsEvents.event("onConnect", event, EventsPushConstants.FROM_BROWSERS, null, null, null);
 	}
 
 	@Override
@@ -65,7 +65,7 @@ public class BridgeWSListener implements WebSocketEventListener, GrailsEventsAwa
 
 	@Override
 	public void onDisconnect(AtmosphereResourceEvent event) {
-		grailsEvents.event("onDisconnect", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		grailsEvents.event("onDisconnect", event, EventsPushConstants.FROM_BROWSERS, null, null, null);
 	}
 
 	@Override
@@ -80,7 +80,7 @@ public class BridgeWSListener implements WebSocketEventListener, GrailsEventsAwa
 
 	@Override
 	public void onClose(AtmosphereResourceEvent event) {
-		grailsEvents.event("onClose", event, EventsPushScopes.FROM_BROWSERS, null, null, null);
+		grailsEvents.event("onClose", event, EventsPushConstants.FROM_BROWSERS, null, null, null);
 	}
 	
 }

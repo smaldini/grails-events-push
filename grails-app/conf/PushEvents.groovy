@@ -1,11 +1,10 @@
-import org.grails.plugin.platform.events.push.EventsPushScopes
+import org.grails.plugin.platform.events.push.EventsPushConstants
 import reactor.event.dispatch.SynchronousDispatcher
 
 includes = ['default']
 
 doWithReactor = {
 
-	reactor(EventsPushScopes.FROM_BROWSERS){
-		dispatcher = new SynchronousDispatcher()
+	reactor(EventsPushConstants.FROM_BROWSERS){
 	}
 }

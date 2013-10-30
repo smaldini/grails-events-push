@@ -11,13 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/*
- * Copyright 2012, Stephane Maldini - adapted from vertx.io EventBus.js library to use atmosphere & events-push grails
- * plugin.
- * Licensed under the Apache License, Version 2.0
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- */
 var grails = grails || {};
 (function () {
     if (!grails.Events) {
@@ -90,6 +83,7 @@ var grails = grails || {};
 
                     if (that.binary && !!window.ArrayBuffer) {
                         rq.webSocketBinaryType = "arraybuffer"
+                        rq.headers = { "X-Atmosphere-Binary" : true };
                     }
 
                     if (!!window.EventSource) {
@@ -191,7 +185,7 @@ var grails = grails || {};
                         try {
                             if (response.responseBody instanceof ArrayBuffer) {
                                 var dataUint = new Uint8Array(response.responseBody);
-                                var endPacket = dataUint.length >= 3  &&
+                                var endPacket = dataUint.length >= 3 &&
                                     "E".charCodeAt(0) == dataUint[dataUint.length - 3] &&
                                     "N".charCodeAt(0) == dataUint[dataUint.length - 2] &&
                                     "D".charCodeAt(0) == dataUint[dataUint.length - 1];
@@ -262,8 +256,10 @@ var grails = grails || {};
                             if (type == '0' || type == '2') {
                                 envelope = data;
                             } else if (type == '1') {
-                                envelope = jQuery.parseJSON(data instanceof ArrayBuffer ?
-                                    String.fromCharCode.apply(null, new Uint8Array(data)) : data);
+                                envelope = jQuery.parseJSON(
+                                    data instanceof ArrayBuffer ?
+                                        String.fromCharCode.apply(null, new Uint8Array(data)) :
+                                        data);
                             }
                             for (var i = 0; i < copy.length; i++) {
                                 copy[i](envelope, topic, response, type);

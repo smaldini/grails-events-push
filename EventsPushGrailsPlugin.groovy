@@ -76,6 +76,14 @@ the server to the browser.
 	// Online location of the plugin's browseable source code.
 	def scm = [url: "https://github.com/smaldini/grails-events-push"]
 
+	def doWithSpring = {
+		eventsPushHandler(EventsPushHandler){ bean->
+			grailsEvents = ref('instanceEventsApi')
+			grailsApplication = ref('grailsApplication')
+			bean.lazyInit = true
+		}
+	}
+
 	def doWithWebDescriptor = { xml ->
 		def servlets = xml.'servlet'
 		def config = application.config?.grails?.events?.push
@@ -118,12 +126,12 @@ the server to the browser.
 						'param-value'(GrailsWebsocketProtocol.name)
 					}
 
-				if (!config?.servlet?.initParams?."org.atmosphere.websocket.binaryWrite")
+				/*if (!config?.servlet?.initParams?."org.atmosphere.websocket.binaryWrite")
 					'init-param' {
 						'param-name'('org.atmosphere.websocket.binaryWrite')
 						'param-value'(true)
 					}
-
+*/
 				'load-on-startup'('0')
 
 				if (ClassUtils.isPresent("javax.servlet.AsyncContext", Thread.currentThread().getContextClassLoader())) {

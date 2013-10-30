@@ -1,4 +1,4 @@
-import org.grails.plugin.platform.events.push.EventsPushScopes
+import org.grails.plugin.platform.events.push.EventsPushConstants
 import static reactor.event.selector.Selectors.*
 
 includes = ['push']
@@ -17,7 +17,7 @@ doWithReactor = {
 		]
 	}
 
-	reactor(EventsPushScopes.FROM_BROWSERS){
+	reactor(EventsPushConstants.FROM_BROWSERS){
 		ext 'browser', [R("sampleBro-.*")]
 	}
 }
