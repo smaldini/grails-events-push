@@ -40,7 +40,7 @@
             return uint.buffer;
         }
 
-        function dataURIArrayBufferToArrayBuffer(dataURI) {
+      function dataURIArrayBufferToUint(dataURI) {
             dataURI = String.fromCharCode.apply(null, new Uint8Array(dataURI));
             var byteString = atob(dataURI.split(',')[1]);
 
@@ -53,11 +53,7 @@
             for (var i = 0; i < byteString.length; i++) {
                 ia[i] = byteString.charCodeAt(i);
             }
-            if (!window.BlobBuilder && window.WebKitBlobBuilder){
-                window.BlobBuilder = window.WebKitBlobBuilder;
-            }
-            // write the ArrayBuffer to a blob, and you're done
-            return new Blob([ab], {type: mimeString});
+            return ia;
         }
 
       function connect() {
@@ -78,32 +74,40 @@
             navigator.webkitGetUserMedia ||
             navigator.mozGetUserMedia ||
             navigator.msGetUserMedia;
+         window.MediaSource = window.MediaSource || window.WebKitMediaSource;
+        if (!!!window.MediaSource) {
+          alert('MediaSource API is not available');
+        }
         if (!window.BlobBuilder && window.WebKitBlobBuilder){
                 window.BlobBuilder = window.WebKitBlobBuilder;
             }
         var startTime = 0;
-
-
+        var video = document.querySelector('video');
          var canvas = $("#canvas");
          var ctx = canvas.get()[0].getContext('2d');
          var canvas2 = $("#canvas2");
          var ctx2 = canvas2.get()[0].getContext('2d');
 
 
-      $('#anotherReceive').change(function (event) {
-          if($(this).attr('checked')){
-            var target = document.getElementById("target");
-            grailsEvents.on($('#topic').val(), function (_stream) {
-                if(_stream instanceof ArrayBuffer){
-                    var img = new Image();
+      function renderAB(_stream){
+        requestAnimationFrame(function () {
+
+         var img = new Image();
                     img.onload = function () {
                         ctx2.drawImage(this, 0, 0, 320, 240);
                     };
                     img.src = String.fromCharCode.apply(null, new Uint8Array(_stream));
 
-                  var elapsed = new Date().getTime()-startTime;
-                  console.log("process time:"+elapsed);
+            var elapsed = new Date().getTime()-startTime;
+            console.log("process time:"+elapsed);
+        });
+      }
 
+      $('#anotherReceive').change(function (event) {
+          if($(this).attr('checked')){
+            grailsEvents.on($('#topic').val(), function (_stream) {
+                if(_stream instanceof ArrayBuffer){
+                  renderAB(_stream);
                 }else{
                   target.src = _stream;
                 }
@@ -112,9 +116,16 @@
         }
       });
 
-      $('#another').change(function (event) {
+    function captureVideo(){
+        startTime = new Date().getTime();
+        ctx.drawImage(video, 0, 0, 320, 240);
+            var data = canvas.get()[0].toDataURL('image/jpeg', 1.0);
+            var ab = dataURItoArrayBuffer(data);
+            //var ab = ctx.getImageData(0,0,320,240).data.buffer;
+            grailsEvents.send($('#to').val(), ab);
+    }
 
-        var video = document.querySelector('video');
+      $('#another').change(function (event) {
 
         if(!$(this).attr('checked')){
             clearTimeout(videoTimer);
@@ -139,11 +150,7 @@
 
            window.videoTimer = setInterval(
                 function () {
-                    startTime = new Date().getTime();
-                    ctx.drawImage(video, 0, 0, 320, 240);
-                    var data = canvas.get()[0].toDataURL('image/jpeg', 1.0);
-                    var ab = dataURItoArrayBuffer(data);
-                    grailsEvents.send($('#to').val(), ab);
+                captureVideo();
             }, 250);
 
       });

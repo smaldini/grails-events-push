@@ -76,14 +76,6 @@ the server to the browser.
 	// Online location of the plugin's browseable source code.
 	def scm = [url: "https://github.com/smaldini/grails-events-push"]
 
-	def doWithSpring = {
-		eventsPushHandler(EventsPushHandler){ bean->
-			grailsEvents = ref('instanceEventsApi')
-			grailsApplication = ref('grailsApplication')
-			bean.lazyInit = true
-		}
-	}
-
 	def doWithWebDescriptor = { xml ->
 		def servlets = xml.'servlet'
 		def config = application.config?.grails?.events?.push
