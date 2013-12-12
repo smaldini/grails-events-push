@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 var grails = grails || {};
-(function () {
+(function ($) {
     if (!grails.Events) {
         grails.Events = function (root, options) {
 
@@ -316,4 +316,4 @@ var grails = grails || {};
         grails.Events.CLOSED = 3;
 
     }
-})();
+})(jQuery);
