@@ -11,7 +11,7 @@ Events-push is a white-list broadcaster (client-side events scope is 'browser').
 MyEvents.groovy >
 
 ```groovy
-events = {    
+events = {
     'savedTodo' namespace: 'browser', browser:true // allows browser push on this topic
 }
 ```
@@ -36,7 +36,21 @@ someView.gsp >
 </r:script>
 ```
 
+
 You can find a full sample application using [Events-si](https://github.com/smaldini/grails-events-si), RabbitMQ, BackboneJS, coffeescript and CloudFoundry in
+
+Asset-Pipeline
+--------------
+For use with asset-pipeline simply add to your main application.js file
+
+```javascript
+//=require jquery
+//=require grailsEvents
+
+var grailsEvents = new grails.Events("http://localhost:8080/app/");
+grailsEvents.send('saveTodo', data); //will send data to server topic 'saveTodo'
+grailsEvents.on('savedTodo', function(data){...}); //will listen for server events on 'savedTodo' topic
+```
 
 Wildcard Topics
 ---------------
