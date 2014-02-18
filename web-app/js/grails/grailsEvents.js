@@ -23,7 +23,7 @@ var grails = grails || {};
             var hasOptions = (options && (typeof options == "object"));
 
             that.globalTopicName = hasOptions && options.globalTopicName && (typeof options.globalTopicName == "string") ? options.globalTopicName : "eventsbus";
-            that.path = hasOptions && options.path && (typeof options.path == "string") ? option.path : "g-eventsbus";
+            that.path = hasOptions && options.path && (typeof options.path == "string") ? options.path : "g-eventsbus";
             that.binary = hasOptions && options.binary && (typeof options.binary == "boolean") ? options.binary : false;
 
             var loadingRequest = {};
