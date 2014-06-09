@@ -17,7 +17,7 @@
  */
 
 import groovy.xml.StreamingMarkupBuilder
-import org.codehaus.groovy.grails.commons.ConfigurationHolder
+import grails.util.Holders
 
 eventCompileEnd = {
     if (!isPluginProject) {
@@ -32,7 +32,7 @@ def buildConfiguration(basedir) {
     if (!sitemeshXml.exists())
         return
 
-    def config = ConfigurationHolder.config?.events?.push
+    def config = Holders.config?.events?.push
     def urlPattern = config?.servlet?.urlPattern ?: '/g-eventsbus/*'
     // Write the atmosphere-decorators.xml file in WEB-INF
     def decoratorsDotXml = """\
